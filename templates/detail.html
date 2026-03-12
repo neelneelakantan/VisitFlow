@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ company.name }}</h2>
+
+<p><a href="{{ company.url }}" target="_blank">Visit Website</a></p>
+
+<p>Value: {{ company.value }}</p>
+<p>Cadence: {{ company.cadence_days }} days</p>
+
+<p>
+Last checked:
+{% if company.last_checked %}
+    {{ company.last_checked.astimezone().strftime("%Y-%m-%d %H:%M:%S") }}
+{% else %}
+    Never
+{% endif %}
+</p>
+
+<h3>Notes</h3>
+<pre>{{ company.notes }}</pre>
+
+<p>
+    <a href="/companies/{{ company.id }}/visit">Visit</a> |
+    <a href="/companies/{{ company.id }}/apply">Apply</a>
+</p>
+
+{% endblock %}

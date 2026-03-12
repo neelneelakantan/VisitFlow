@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Companies</h2>
+
+{% for item in companies %}
+<div class="company-card">
+
+    <div>
+        <a href="/company/{{ item.company.id }}">{{ item.company.name }}</a>
+        {% if item.overdue %}
+            <span class="overdue">• Overdue</span>
+        {% endif %}
+    </div>
+
+    <div class="value-{{ item.company.value }}">
+        Value: {{ item.company.value }}
+    </div>
+
+    <div>
+        Cadence: {{ item.company.cadence_days }} days
+    </div>
+
+    <div>
+        Last checked:
+        {% if item.company.last_checked %}
+            {{ item.company.last_checked.astimezone().strftime("%Y-%m-%d %H:%M:%S") }}
+        {% else %}
+            Never
+        {% endif %}
+    </div>
+
+    <div>
+        <a href="/companies/{{ item.company.id }}/visit">Visit</a> |
+        <a href="/companies/{{ item.company.id }}/apply">Apply</a>
+    </div>
+
+</div>
+{% endfor %}
+
+{% endblock %}
