@@ -5,6 +5,12 @@
 
 <h2>Companies</h2>
 
+<!-- Search Bar -->
+<form method="get" action="/" style="margin-bottom: 20px;">
+    <input type="text" name="q" placeholder="Search..." value="{{ q }}" />
+    <button type="submit">Search</button>
+</form>
+
 {% for item in companies %}
 <div class="company-card">
 
@@ -33,11 +39,11 @@
     </div>
 
     <div>
-        <form method="post" action="/detail/{{ item.company.id }}/visit" style="display:inline;">
+        <form method="post" action="/company/{{ item.company.id }}/visit" style="display:inline;">
             <button type="submit">Visit</button>
         </form>
 
-        <form method="post" action="/detail/{{ item.company.id }}/apply" style="display:inline;">
+        <form method="post" action="/company/{{ item.company.id }}/apply" style="display:inline;">
             <button type="submit">Apply</button>
         </form>
     </div>
@@ -45,4 +51,19 @@
 </div>
 {% endfor %}
 
+<div style="margin-top: 20px;">
+
+    {% if has_prev %}
+        <a href="/?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
+    {% endif %}
+
+    <span style="margin: 0 10px;">
+        Page {{ page }} of {{ total_pages }}
+    </span>
+
+    {% if has_next %}
+        <a href="/?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}">Next</a>
+    {% endif %}
+
+</div>
 {% endblock %}

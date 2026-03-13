@@ -8,14 +8,30 @@ from store import store
 from templates_engine import templates
 
 router = APIRouter()
-
 @router.get("/", response_class=HTMLResponse)
-def list_companies_page(request: Request):
+def list_companies_page(
+    request: Request,
+    q: str | None = None,
+    page: int = 1,
+    page_size: int = 20
+):
     today = datetime.now(timezone.utc)
-    enriched = []
+    companies = store.list_companies()
 
-    for company in store.list_companies():
-        # Determine overdue status
+    # --- Search filter ---
+    if q:
+        q_lower = q.lower()
+        companies = [
+            c for c in companies
+            if q_lower in c.name.lower()
+            or q_lower in (c.url or "").lower()
+            or q_lower in (c.notes or "").lower()
+            or q_lower in c.value.lower()
+        ]
+
+    # --- Enrichment + overdue logic ---
+    enriched = []
+    for company in companies:
         if company.status != "active":
             overdue = False
         elif company.last_checked is None:
@@ -29,21 +45,36 @@ def list_companies_page(request: Request):
             "overdue": overdue
         })
 
-    # Sorting: overdue first, then by value tier
+    # --- Sorting ---
     value_order = {"high": 0, "medium": 1, "low": 2}
-
     enriched.sort(
         key=lambda x: (
-            not x["overdue"],               # overdue first
-            value_order[x["company"].value] # then by value
+            not x["overdue"],
+            value_order[x["company"].value]
         )
     )
+
+    # --- Pagination ---
+    total = len(enriched)
+    total_pages = max(1, (total + page_size - 1) // page_size)
+
+    # clamp page to valid range
+    page = max(1, min(page, total_pages))
+
+    start = (page - 1) * page_size
+    end = start + page_size
+    paged = enriched[start:end]
 
     return templates.TemplateResponse(
         "list.html",
         {
             "request": request,
-            "companies": enriched
+            "companies": paged,
+            "q": q or "",
+            "page": page,
+            "total_pages": total_pages,
+            "has_prev": page > 1,
+            "has_next": page < total_pages
         }
     )
 
@@ -51,7 +82,6 @@ def list_companies_page(request: Request):
 @router.get("/company/new", response_class=HTMLResponse)
 def new_company_form(request: Request):
     return templates.TemplateResponse("new_company.html", {"request": request})
-
 
 @router.post("/company/new")
 def create_company_form(name: str = Form(...), url: str = Form(...),
@@ -81,16 +111,17 @@ def company_detail_page(request: Request, company_id: int):
     )
 
 
-@router.post("/detail/{company_id}/visit")
+@router.post("/company/{company_id}/visit")
 async def visit_now(company_id: int):
     store.mark_visited(company_id)
-    return RedirectResponse(f"/detail/{company_id}", status_code=303)
+    return RedirectResponse(f"/company/{company_id}", status_code=303)
 
 
-@router.post("/detail/{company_id}/apply")
+@router.post("/company/{company_id}/apply")
 async def apply_now(company_id: int):
     store.mark_applied(company_id)
-    return RedirectResponse(f"/detail/{company_id}", status_code=303)
+    return RedirectResponse(f"/company/{company_id}", status_code=303)
+
 
 @router.get("/api-explorer", response_class=HTMLResponse)
 def api_explorer(request: Request):
