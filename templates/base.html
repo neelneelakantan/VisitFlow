@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html>
 <head>
@@ -12,9 +11,20 @@
         .company-card { margin-bottom: 12px; padding: 10px; border-bottom: 1px solid #ddd; }
     </style>
 </head>
+
 <body>
     <h1>VisitFlow</h1>
+
+    <nav>
+        <a href="/">Dashboard</a> |
+        <a href="/api-explorer">API Explorer</a>
+    </nav>
+
+    <hr>
+
     {% block content %}{% endblock %}
+<footer style="margin-top: 20px; font-size: 0.8em; color: #666;">
+    Generated at {{ now() }}
+</footer>
 </body>
 </html>
-

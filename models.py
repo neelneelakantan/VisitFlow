@@ -12,6 +12,7 @@ class Company(BaseModel):
     reason: str = ""
     notes: str = ""
     last_checked: Optional[datetime] = None
+    last_applied: datetime | None = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 

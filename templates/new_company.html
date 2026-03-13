@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Add New Company</h2>
+
+<form method="post" action="/company/new">
+    <p>Name: <input type="text" name="name"></p>
+    <p>URL: <input type="text" name="url"></p>
+    <p>Value:
+        <select name="value">
+            <option value="high">High</option>
+            <option value="medium" selected>Medium</option>
+            <option value="low">Low</option>
+        </select>
+    </p>
+    <p>Cadence (days): <input type="number" name="cadence_days" value="7"></p>
+    <button type="submit">Create</button>
+</form>
+
+{% endblock %}
+

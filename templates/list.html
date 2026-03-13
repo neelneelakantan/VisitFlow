@@ -1,6 +1,8 @@
 {% extends "base.html" %}
 {% block content %}
 
+<p><a href="/company/new">+ Add New Company</a></p>
+
 <h2>Companies</h2>
 
 {% for item in companies %}
@@ -31,8 +33,13 @@
     </div>
 
     <div>
-        <a href="/companies/{{ item.company.id }}/visit">Visit</a> |
-        <a href="/companies/{{ item.company.id }}/apply">Apply</a>
+        <form method="post" action="/detail/{{ item.company.id }}/visit" style="display:inline;">
+            <button type="submit">Visit</button>
+        </form>
+
+        <form method="post" action="/detail/{{ item.company.id }}/apply" style="display:inline;">
+            <button type="submit">Apply</button>
+        </form>
     </div>
 
 </div>

@@ -1,22 +1,18 @@
 from fastapi import FastAPI
-from datetime import datetime, timezone, timedelta
 from fastapi.templating import Jinja2Templates
-from fastapi import Request
 from routes_api import router as api_router
 from routes_pages import router as pages_router
+from datetime import datetime
 
-templates = Jinja2Templates(directory="templates")
+from templates_engine import templates
 
 app = FastAPI()
 
-app.include_router(api_router)
+# Clean separation between API and UI
+app.include_router(api_router, prefix="/api")
 app.include_router(pages_router)
-
-#print(app.routes)
 
 @app.get("/")
 def read_root():
     return {"status": "VisitFlow running"}
-
-
 
