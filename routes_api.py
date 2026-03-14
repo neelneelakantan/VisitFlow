@@ -1,9 +1,15 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from datetime import datetime, timezone
 
 from models import Company, CompanyCreate, CompanyUpdate, ApplyNote
 from store import store
+
+from pydantic import BaseModel
+from pipeline import build_visit_record
+from models import VisitRecord
+from store import VISIT_STORE
+from templates_engine import templates
 
 router = APIRouter()
 
@@ -114,3 +120,18 @@ def get_overdue_companies():
             overdue.append(company)
 
     return overdue
+
+
+class VisitInput(BaseModel):
+    notes: str
+
+@router.post("/visit", response_model=VisitRecord)
+def process_visit(input: VisitInput):
+    """
+    Accept raw notes from the user and run them through
+    the full VisitFlow transformation pipeline.
+    """
+    record = build_visit_record(input.notes)
+    VISIT_STORE.append(record)
+    return record
+

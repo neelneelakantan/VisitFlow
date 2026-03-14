@@ -36,3 +36,4 @@ class Store:
 
 # Global instance
 store = Store()
+VISIT_STORE = []

@@ -1,6 +1,7 @@
 from pydantic import BaseModel, Field
 from datetime import datetime, timezone
-from typing import Optional
+from typing import List, Optional, Dict, Any
+import uuid
 
 class Company(BaseModel):
     id: int
@@ -37,4 +38,19 @@ class CompanyUpdate(BaseModel):
 class ApplyNote(BaseModel):
     note: str
 
+
+class VisitRecord(BaseModel):
+    visit_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+
+    raw_notes: str
+    normalized_notes: Optional[str] = None
+
+    structured_summary: Optional[Dict[str, Any]] = None
+    insights: Optional[Dict[str, Any]] = None
+    recommended_next_steps: Optional[List[str]] = None
+
+    tags: Optional[List[str]] = None
+    confidence: Optional[float] = None
+    narrative: Optional[str] = None
     

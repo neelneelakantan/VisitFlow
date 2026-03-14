@@ -5,7 +5,10 @@ from datetime import datetime, timezone
 from fastapi import Form
 from models import Company
 from store import store
+from store import VISIT_STORE
 from templates_engine import templates
+from pipeline import build_visit_record
+
 
 router = APIRouter()
 @router.get("/", response_class=HTMLResponse)
@@ -127,4 +130,66 @@ async def apply_now(company_id: int):
 def api_explorer(request: Request):
     return templates.TemplateResponse("api.html", {"request": request})
 
+
+@router.get("/test")
+def test_page(request: Request):
+    return templates.TemplateResponse(
+        "base.html",
+        {"request": request, "title": "Test Page"}
+    )
+
+
+@router.get("/timeline")
+def timeline(request: Request):
+    visits = [
+        {
+            "visit_id": v.visit_id,
+            "timestamp": v.timestamp,
+            "summary": v.structured_summary.get("key_points", []),
+            "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
+            "energy": v.insights.get("sentiment_energy", {}).get("energy")
+        }
+        for v in VISIT_STORE
+    ]
+
+    return templates.TemplateResponse(
+        "timeline.html",
+        {"request": request, "visits": visits}
+    )
+
+@router.get("/visit/{visit_id}")
+def visit_detail(visit_id: str, request: Request):
+    from store import VISIT_STORE
+
+    # Find the visit
+    for v in VISIT_STORE:
+        if v.visit_id == visit_id:
+            return templates.TemplateResponse(
+                "visit_detail.html",
+                {"request": request, "visit": v}
+            )
+
+    return templates.TemplateResponse(
+        "visit_detail.html",
+        {"request": request, "visit": None}
+    )
+
+
+@router.get("/new")
+def new_visit_form(request: Request):
+    return templates.TemplateResponse(
+        "new_visit.html",
+        {"request": request}
+    )
+
+@router.post("/new")
+def submit_new_visit(request: Request, notes: str = Form(...)):
+    record = build_visit_record(notes)
+    VISIT_STORE.append(record)
+
+    # Redirect to the visit detail page
+    return templates.TemplateResponse(
+        "visit_detail.html",
+        {"request": request, "visit": record}
+    )
 

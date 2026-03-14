@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Visit Details</h1>
+
+<p><strong>Timestamp:</strong> {{ visit.timestamp }}</p>
+
+<h2>Summary</h2>
+<ul>
+    {% for item in visit.structured_summary.key_points %}
+        <li>{{ item }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Insights</h2>
+<ul>
+    {% for key, value in visit.insights.items() %}
+        <li><strong>{{ key }}:</strong> {{ value }}</li>
+    {% endfor %}
+</ul>
+
+<h2>Sentiment & Energy</h2>
+<p>
+    <strong>Sentiment:</strong> {{ visit.insights.sentiment_energy.sentiment }}<br>
+    <strong>Energy:</strong> {{ visit.insights.sentiment_energy.energy }}
+</p>
+
+<h2>Narrative</h2>
+<p>{{ visit.narrative }}</p>
+
+<p><a href="/timeline">← Back to Timeline</a></p>
+{% endblock %}

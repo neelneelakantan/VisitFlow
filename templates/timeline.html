@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h1>Timeline</h1>
+
+{% if visits %}
+    <ul>
+        {% for v in visits %}
+            <li style="margin-bottom: 1rem;">
+                <a href="/visit/{{ v.visit_id }}">
+                    <strong>{{ v.timestamp }}</strong>
+                </a>
+                <br>
+                <em>Sentiment:</em> {{ v.sentiment }},
+                <em>Energy:</em> {{ v.energy }}
+                <br>
+                <em>Summary:</em>
+                {{ v.summary | join(", ") }}
+            </li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p>No visits yet. Add one using the API or UI.</p>
+{% endif %}
+
+{% endblock %}
