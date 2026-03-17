@@ -10,6 +10,11 @@ from pipeline import build_visit_record
 from models import VisitRecord
 from store import VISIT_STORE
 from templates_engine import templates
+from models import FreeNote
+from typing import Optional
+
+from store import load_freenotes, save_freenotes
+from store import add_freenote
 
 router = APIRouter()
 
@@ -33,6 +38,8 @@ def create_company(payload: CompanyCreate):
         url=payload.url,
         value=payload.value or "medium",
         cadence_days=payload.cadence_days or 7,
+        frequency =  payload.frequency or "weekly",
+        specific_date = payload.specific_date,
         status=payload.status or "active",
         reason=payload.reason or "",
         notes=payload.notes or "",
@@ -102,21 +109,24 @@ def apply_company(company_id: int, payload: ApplyNote):
 # -----------------------------
 # OVERDUE COMPANIES
 # -----------------------------
+
+from datetime import datetime, timezone
+from utils import compute_next_check
+
 @router.get("/companies/overdue")
 def get_overdue_companies():
-    today = datetime.now(timezone.utc)
+    today = datetime.now(timezone.utc).date()
     overdue = []
 
     for company in store.list_companies():
         if company.status != "active":
             continue
 
-        if company.last_checked is None:
-            overdue.append(company)
+        next_check = compute_next_check(company)
+        if next_check is None:
             continue
 
-        days = (today - company.last_checked).days
-        if days >= company.cadence_days:
+        if next_check.date() < today:
             overdue.append(company)
 
     return overdue
@@ -134,4 +144,17 @@ def process_visit(input: VisitInput):
     record = build_visit_record(input.notes)
     VISIT_STORE.append(record)
     return record
+
+
+# router internally prefixes with /api so no need to prefix again.
+@router.post("/freenotes")
+def create_freenote(text: str, template_type: Optional[str] = None):
+    return add_freenote(text, template_type)
+
+
+@router.get("/freenotes")
+def list_freenotes():
+    notes = load_freenotes()
+    return sorted(notes, key=lambda n: n["timestamp"], reverse=True)
+
 

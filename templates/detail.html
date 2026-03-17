@@ -7,6 +7,19 @@
 
 <p>Value: {{ company.value }}</p>
 <p>Cadence: {{ company.cadence_days }} days</p>
+<p>Frequency: {{ company.frequency }}</p>
+
+{% if company.frequency == "specific_date" and company.specific_date %}
+<p>Specific Date: {{ company.specific_date }}</p>
+{% endif %}
+
+<p>Next Check:
+    {% if next_check %}
+        {{ next_check.astimezone().strftime("%Y-%m-%d") }}
+    {% else %}
+        —
+    {% endif %}
+</p>
 
 <p>
 Last checked:
@@ -18,11 +31,11 @@ Last checked:
 </p>
 
 <!-- NEW: Visit Now / Apply Now buttons -->
-<form method="post" action="/company/{{ company.id }}/visit">
+<form method="post" action="/companies/{{ company.id }}/visit">
     <button type="submit">Visit Now</button>
 </form>
 
-<form method="post" action="/company/{{ company.id }}/apply">
+<form method="post" action="/companies/{{ company.id }}/apply">
     <button type="submit">Applied Now</button>
 </form>
 

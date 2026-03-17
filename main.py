@@ -13,7 +13,7 @@ app = FastAPI()
 app.include_router(api_router, prefix="/api")
 app.include_router(pages_router)
 
-@app.get("/")
+@app.get("/status")
 def read_root():
     return {"status": "VisitFlow running"}
 

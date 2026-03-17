@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Dashboard</h2>
+
+<p>Total companies: {{ total }}</p>
+
+<h3>Overdue</h3>
+<ul>
+{% for c in overdue %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
+
+<h3>Due Today</h3>
+<ul>
+{% for c in due_today %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
+
+<h3>Upcoming (next 7 days)</h3>
+<ul>
+{% for c in upcoming %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
+
+<h3>Never Checked</h3>
+<ul>
+{% for c in never_checked %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
+
+{% endblock %}

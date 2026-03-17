@@ -3,9 +3,12 @@
 
 <h2>Add New Company</h2>
 
-<form method="post" action="/company/new">
+<form method="post" action="/companies/new">
+
     <p>Name: <input type="text" name="name"></p>
+
     <p>URL: <input type="text" name="url"></p>
+
     <p>Value:
         <select name="value">
             <option value="high">High</option>
@@ -13,9 +16,34 @@
             <option value="low">Low</option>
         </select>
     </p>
+
     <p>Cadence (days): <input type="number" name="cadence_days" value="7"></p>
+
+    <!-- NEW: Frequency -->
+    <p>Frequency:
+        <select name="frequency" id="frequency-select">
+            <option value="none">None</option>
+            <option value="daily">Daily</option>
+            <option value="weekly" selected>Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="specific_date">Specific Date</option>
+        </select>
+    </p>
+
+    <!-- NEW: Specific Date (hidden unless selected) -->
+    <p id="specific-date-container" style="display:none;">
+        Specific Date:
+        <input type="date" name="specific_date">
+    </p>
+
     <button type="submit">Create</button>
 </form>
 
-{% endblock %}
+<script>
+document.getElementById("frequency-select").addEventListener("change", function() {
+    const container = document.getElementById("specific-date-container");
+    container.style.display = this.value === "specific_date" ? "block" : "none";
+});
+</script>
 
+{% endblock %}

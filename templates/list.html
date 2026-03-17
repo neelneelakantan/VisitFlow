@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block content %}
 
-<p><a href="/company/new">+ Add New Company</a></p>
+<p><a href="/companies/new">+ Add New Company</a></p>
 
 <h2>Companies</h2>
 
@@ -15,7 +15,7 @@
 <div class="company-card">
 
     <div>
-        <a href="/company/{{ item.company.id }}">{{ item.company.name }}</a>
+        <a href="/companies/{{ item.company.id }}">{{ item.company.name }}</a>
         {% if item.overdue %}
             <span class="overdue">• Overdue</span>
         {% endif %}
@@ -39,11 +39,11 @@
     </div>
 
     <div>
-        <form method="post" action="/company/{{ item.company.id }}/visit" style="display:inline;">
+        <form method="post" action="/companies/{{ item.company.id }}/visit" style="display:inline;">
             <button type="submit">Visit</button>
         </form>
 
-        <form method="post" action="/company/{{ item.company.id }}/apply" style="display:inline;">
+        <form method="post" action="/companies/{{ item.company.id }}/apply" style="display:inline;">
             <button type="submit">Apply</button>
         </form>
     </div>

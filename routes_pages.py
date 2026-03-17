@@ -1,24 +1,69 @@
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company
 from store import store
 from store import VISIT_STORE
+from store import load_freenotes
+from store import add_freenote
 from templates_engine import templates
 from pipeline import build_visit_record
-
+from utils import compute_next_check
 
 router = APIRouter()
-@router.get("/", response_class=HTMLResponse)
+
+@router.get("/")
+def dashboard_page(request: Request):
+    companies = store.list_companies()
+    today = datetime.now(timezone.utc).date()
+
+    total = len(companies)
+
+    overdue = []
+    due_today = []
+    upcoming = []
+    never_checked = []
+
+    for c in companies:
+        next_check = compute_next_check(c)
+
+        if next_check is None:
+            continue
+
+        next_date = next_check.date()
+
+        if c.last_checked is None:
+            never_checked.append(c)
+        elif next_date < today:
+            overdue.append(c)
+        elif next_date == today:
+            due_today.append(c)
+        elif today < next_date <= today + timedelta(days=7):
+            upcoming.append(c)
+
+    return templates.TemplateResponse(
+        "dashboard.html",
+        {
+            "request": request,
+            "total": total,
+            "overdue": overdue,
+            "due_today": due_today,
+            "upcoming": upcoming,
+            "never_checked": never_checked,
+        }
+    )
+
+
+@router.get("/companies", response_class=HTMLResponse)
 def list_companies_page(
     request: Request,
     q: str | None = None,
     page: int = 1,
     page_size: int = 20
 ):
-    today = datetime.now(timezone.utc)
+    today = datetime.now(timezone.utc).date()
     companies = store.list_companies()
 
     # --- Search filter ---
@@ -35,17 +80,17 @@ def list_companies_page(
     # --- Enrichment + overdue logic ---
     enriched = []
     for company in companies:
-        if company.status != "active":
+        next_check = compute_next_check(company)
+
+        if next_check is None:
             overdue = False
-        elif company.last_checked is None:
-            overdue = True
         else:
-            days = (today - company.last_checked).days
-            overdue = days >= company.cadence_days
+            overdue = next_check.date() < today
 
         enriched.append({
             "company": company,
-            "overdue": overdue
+            "overdue": overdue,
+            "next_check": next_check,
         })
 
     # --- Sorting ---
@@ -82,26 +127,37 @@ def list_companies_page(
     )
 
 
-@router.get("/company/new", response_class=HTMLResponse)
+@router.get("/companies/new", response_class=HTMLResponse)
 def new_company_form(request: Request):
     return templates.TemplateResponse("new_company.html", {"request": request})
 
-@router.post("/company/new")
-def create_company_form(name: str = Form(...), url: str = Form(...),
-                        value: str = Form("medium"), cadence_days: int = Form(7)):
+
+@router.post("/companies/new")
+def create_company_form(
+    name: str = Form(...),
+    url: str = Form(...),
+    value: str = Form("medium"),
+    cadence_days: int = Form(7),
+    frequency: str = Form("weekly"),
+    specific_date: str | None = Form(None),
+):
     company = Company(
         id=0,
         name=name,
         url=url,
         value=value,
         cadence_days=cadence_days,
+        frequency=frequency,
+        specific_date=specific_date,
     )
     store.add_company(company)
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/companies", status_code=303)
 
-@router.get("/company/{company_id}", response_class=HTMLResponse)
+
+@router.get("/companies/{company_id}", response_class=HTMLResponse)
 def company_detail_page(request: Request, company_id: int):
     company = store.get_company(company_id)
+    next_check = compute_next_check(company)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -109,21 +165,23 @@ def company_detail_page(request: Request, company_id: int):
         "detail.html",
         {
             "request": request,
-            "company": company
+            "company": company,
+            "next_check": next_check,
         }
     )
 
 
-@router.post("/company/{company_id}/visit")
+
+@router.post("/companies/{company_id}/visit")
 async def visit_now(company_id: int):
     store.mark_visited(company_id)
-    return RedirectResponse(f"/company/{company_id}", status_code=303)
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 
-@router.post("/company/{company_id}/apply")
+@router.post("/companies/{company_id}/apply")
 async def apply_now(company_id: int):
     store.mark_applied(company_id)
-    return RedirectResponse(f"/company/{company_id}", status_code=303)
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 
 @router.get("/api-explorer", response_class=HTMLResponse)
@@ -192,4 +250,27 @@ def submit_new_visit(request: Request, notes: str = Form(...)):
         "visit_detail.html",
         {"request": request, "visit": record}
     )
+
+
+@router.get("/freenotes")
+def freenotes_list_page(request: Request):
+    notes = load_freenotes()
+    notes = sorted(notes, key=lambda n: n["timestamp"], reverse=True)
+    return templates.TemplateResponse(
+        "freenotes_list.html",
+        {"request": request, "notes": notes}
+    )
+
+@router.get("/freenotes/new")
+def freenotes_new_page(request: Request):
+    return templates.TemplateResponse(
+        "freenotes_new.html",
+        {"request": request}
+    )
+
+
+@router.post("/freenotes/new")
+def freenotes_new_submit(request: Request, text: str = Form(...)):
+    add_freenote(text)
+    return RedirectResponse(url="/freenotes", status_code=303)
 
