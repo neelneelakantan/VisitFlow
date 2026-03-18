@@ -1,20 +1,15 @@
-from fastapi import APIRouter, HTTPException, Request
-from fastapi.responses import RedirectResponse
+
+from fastapi import APIRouter, HTTPException
 from datetime import datetime, timezone
-
-from models import Company, CompanyCreate, CompanyUpdate, ApplyNote
-from store import store
-
-from pydantic import BaseModel
-from pipeline import build_visit_record
-from models import VisitRecord
-from store import VISIT_STORE
-from templates_engine import templates
-from models import FreeNote
 from typing import Optional
 
-from store import load_freenotes, save_freenotes
-from store import add_freenote
+from pydantic import BaseModel
+
+from models import Company, CompanyCreate, CompanyUpdate, ApplyNote, VisitRecord
+from pipeline import build_visit_record
+from store import store, VISIT_STORE, load_freenotes, add_freenote
+from utils import compute_next_check
+
 
 router = APIRouter()
 
@@ -110,8 +105,6 @@ def apply_company(company_id: int, payload: ApplyNote):
 # OVERDUE COMPANIES
 # -----------------------------
 
-from datetime import datetime, timezone
-from utils import compute_next_check
 
 @router.get("/companies/overdue")
 def get_overdue_companies():
@@ -144,6 +137,28 @@ def process_visit(input: VisitInput):
     record = build_visit_record(input.notes)
     VISIT_STORE.append(record)
     return record
+
+@router.get("/visits")
+def list_visits():
+    return [
+        {
+            "visit_id": v.visit_id,
+            "timestamp": v.timestamp,
+            "summary": v.structured_summary.get("key_points", []),
+            "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
+            "energy": v.insights.get("sentiment_energy", {}).get("energy")
+        }
+        for v in VISIT_STORE
+    ]
+
+
+@router.get("/visit/{visit_id}")
+def get_visit(visit_id: str):
+    for v in VISIT_STORE:
+        if v.visit_id == visit_id:
+            return v
+    return {"error": "Visit not found"}
+
 
 
 # router internally prefixes with /api so no need to prefix again.

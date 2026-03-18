@@ -1,7 +1,6 @@
 
 from models import VisitRecord
-from datetime import datetime
-
+from datetime import datetime, timezone
 
 # -----------------------------
 # 1. INGEST
@@ -10,7 +9,7 @@ def ingest_notes(raw_text: str) -> VisitRecord:
     """Create a VisitRecord with raw notes and timestamp."""
     return VisitRecord(
         raw_notes=raw_text,
-        timestamp=datetime.utcnow()
+        timestamp=datetime.now(timezone.utc)
     )
 
 
@@ -28,13 +27,38 @@ def normalize_text(text: str) -> str:
 # -----------------------------
 # 3. EXTRACT STRUCTURE
 # -----------------------------
+
 def extract_structure(normalized: str) -> dict:
-    """Extract themes, bullets, key points."""
-    # Placeholder structure
+    """
+    Lightweight structure extraction:
+    - key points: split into sentences
+    - actions: detect verbs like 'call', 'email', 'apply', 'follow up'
+    - themes: detect categories like recruiter, interview, progress, blockers
+    """
+    text = normalized.lower()
+
+    # Sentence-level key points
+    key_points = [s.strip() for s in normalized.split('.') if s.strip()]
+
+    # Simple action detection
+    action_verbs = ["call", "email", "apply", "follow up", "schedule", "prepare"]
+    actions = [kp for kp in key_points if any(v in kp.lower() for v in action_verbs)]
+
+    # Simple theme detection
+    themes = []
+    if "recruiter" in text:
+        themes.append("recruiter")
+    if "interview" in text:
+        themes.append("interview")
+    if "progress" in text:
+        themes.append("progress")
+    if "stuck" in text or "blocked" in text:
+        themes.append("blocker")
+
     return {
-        "themes": [],
-        "key_points": [],
-        "actions": []
+        "themes": themes,
+        "key_points": key_points,
+        "actions": actions
     }
 
 
@@ -137,39 +161,6 @@ def detect_sentiment_energy(text: str) -> dict:
         "energy": energy
     }
 
-
-def extract_structure(normalized: str) -> dict:
-    """
-    Lightweight structure extraction:
-    - key points: split into sentences
-    - actions: detect verbs like 'call', 'email', 'apply', 'follow up'
-    - themes: detect categories like recruiter, interview, progress, blockers
-    """
-    text = normalized.lower()
-
-    # Sentence-level key points
-    key_points = [s.strip() for s in normalized.split('.') if s.strip()]
-
-    # Simple action detection
-    action_verbs = ["call", "email", "apply", "follow up", "schedule", "prepare"]
-    actions = [kp for kp in key_points if any(v in kp.lower() for v in action_verbs)]
-
-    # Simple theme detection
-    themes = []
-    if "recruiter" in text:
-        themes.append("recruiter")
-    if "interview" in text:
-        themes.append("interview")
-    if "progress" in text:
-        themes.append("progress")
-    if "stuck" in text or "blocked" in text:
-        themes.append("blocker")
-
-    return {
-        "themes": themes,
-        "key_points": key_points,
-        "actions": actions
-    }
 
 
 def generate_narrative(record: VisitRecord) -> str:
