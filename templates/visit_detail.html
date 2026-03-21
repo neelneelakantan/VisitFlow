@@ -1,6 +1,9 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+{% if visit %}
+
 <h1>Visit Details</h1>
 
 <p><strong>Timestamp:</strong> {{ visit.timestamp }}</p>
@@ -29,4 +32,13 @@
 <p>{{ visit.narrative }}</p>
 
 <p><a href="/timeline">← Back to Timeline</a></p>
+
+{% else %}
+
+<h1>Visit Not Found</h1>
+<p>The visit you are trying to view does not exist.</p>
+<p><a href="/timeline">← Back to Timeline</a></p>
+
+{% endif %}
+
 {% endblock %}

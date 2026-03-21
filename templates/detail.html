@@ -31,8 +31,8 @@ Last checked:
 </p>
 
 <!-- NEW: Visit Now / Apply Now buttons -->
-<form method="post" action="/companies/{{ company.id }}/visit">
-    <button type="submit">Visit Now</button>
+<form action="/visit/new" method="post">
+    <input type="hidden" name="company_id" value="{{ company.id }}">
 </form>
 
 <form method="post" action="/companies/{{ company.id }}/apply">

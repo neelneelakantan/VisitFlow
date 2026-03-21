@@ -7,7 +7,8 @@ from pydantic import BaseModel
 
 from models import Company, CompanyCreate, CompanyUpdate, ApplyNote, VisitRecord
 from pipeline import build_visit_record
-from store import store, VISIT_STORE, load_freenotes, add_freenote
+import store
+from store import load_freenotes, add_freenote, add_visit
 from utils import compute_next_check
 
 
@@ -19,7 +20,7 @@ router = APIRouter()
 # -----------------------------
 @router.get("/companies")
 def list_companies():
-    return store.list_companies()
+    return store.store.list_companies()
 
 
 # -----------------------------
@@ -40,7 +41,7 @@ def create_company(payload: CompanyCreate):
         notes=payload.notes or "",
         created_at=datetime.now(timezone.utc),
     )
-    return store.add_company(company)
+    return store.store.add_company(company)
 
 
 # -----------------------------
@@ -48,7 +49,7 @@ def create_company(payload: CompanyCreate):
 # -----------------------------
 @router.get("/companies/{company_id}")
 def get_company(company_id: int):
-    company = store.get_company(company_id)
+    company = store.store.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
     return company
@@ -59,7 +60,7 @@ def get_company(company_id: int):
 # -----------------------------
 @router.put("/companies/{company_id}")
 def update_company(company_id: int, payload: CompanyUpdate):
-    company = store.get_company(company_id)
+    company = store.store.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -75,7 +76,7 @@ def update_company(company_id: int, payload: CompanyUpdate):
 # -----------------------------
 @router.post("/companies/{company_id}/visit")
 def visit_company(company_id: int):
-    company = store.get_company(company_id)
+    company = store.store.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -89,7 +90,7 @@ def visit_company(company_id: int):
 # -----------------------------
 @router.post("/companies/{company_id}/apply")
 def apply_company(company_id: int, payload: ApplyNote):
-    company = store.get_company(company_id)
+    company = store.store.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -111,7 +112,7 @@ def get_overdue_companies():
     today = datetime.now(timezone.utc).date()
     overdue = []
 
-    for company in store.list_companies():
+    for company in store.store.list_companies():
         if company.status != "active":
             continue
 
@@ -135,7 +136,7 @@ def process_visit(input: VisitInput):
     the full VisitFlow transformation pipeline.
     """
     record = build_visit_record(input.notes)
-    VISIT_STORE.append(record)
+    add_visit(record)
     return record
 
 @router.get("/visits")
@@ -148,13 +149,13 @@ def list_visits():
             "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
             "energy": v.insights.get("sentiment_energy", {}).get("energy")
         }
-        for v in VISIT_STORE
+        for v in store.VISIT_STORE
     ]
 
 
 @router.get("/visit/{visit_id}")
 def get_visit(visit_id: str):
-    for v in VISIT_STORE:
+    for v in store.VISIT_STORE:
         if v.visit_id == visit_id:
             return v
     return {"error": "Visit not found"}

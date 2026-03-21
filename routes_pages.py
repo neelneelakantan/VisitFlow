@@ -2,11 +2,9 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
-from models import Company
-from store import store
-from store import VISIT_STORE
-from store import load_freenotes
-from store import add_freenote
+from models import Company, VisitRecord
+import store
+from store import load_freenotes, add_freenote, add_visit
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
@@ -15,7 +13,7 @@ router = APIRouter()
 
 @router.get("/")
 def dashboard_page(request: Request):
-    companies = store.list_companies()
+    companies = store.store.list_companies()
     today = datetime.now(timezone.utc).date()
 
     total = len(companies)
@@ -63,7 +61,7 @@ def list_companies_page(
     page_size: int = 20
 ):
     today = datetime.now(timezone.utc).date()
-    companies = store.list_companies()
+    companies = store.store.list_companies()
 
     # --- Search filter ---
     if q:
@@ -149,13 +147,13 @@ def create_company_form(
         frequency=frequency,
         specific_date=specific_date,
     )
-    store.add_company(company)
+    store.store.add_company(company)
     return RedirectResponse("/companies", status_code=303)
 
 
 @router.get("/companies/{company_id}", response_class=HTMLResponse)
 def company_detail_page(request: Request, company_id: int):
-    company = store.get_company(company_id)
+    company = store.store.get_company(company_id)
     next_check = compute_next_check(company)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
@@ -173,13 +171,13 @@ def company_detail_page(request: Request, company_id: int):
 
 @router.post("/companies/{company_id}/visit")
 async def visit_now(company_id: int):
-    store.mark_visited(company_id)
+    store.store.mark_visited(company_id)
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 
 @router.post("/companies/{company_id}/apply")
 async def apply_now(company_id: int):
-    store.mark_applied(company_id)
+    store.store.mark_applied(company_id)
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 
@@ -206,7 +204,7 @@ def timeline(request: Request):
             "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
             "energy": v.insights.get("sentiment_energy", {}).get("energy")
         }
-        for v in VISIT_STORE
+        for v in store.VISIT_STORE
     ]
 
     return templates.TemplateResponse(
@@ -216,10 +214,8 @@ def timeline(request: Request):
 
 @router.get("/visit/{visit_id}")
 def visit_detail(visit_id: str, request: Request):
-    from store import VISIT_STORE
-
     # Find the visit
-    for v in VISIT_STORE:
+    for v in store.VISIT_STORE:
         if v.visit_id == visit_id:
             return templates.TemplateResponse(
                 "visit_detail.html",
@@ -242,7 +238,7 @@ def new_visit_form(request: Request):
 @router.post("/new")
 def submit_new_visit(request: Request, notes: str = Form(...)):
     record = build_visit_record(notes)
-    VISIT_STORE.append(record)
+    add_visit(record)
 
     # Redirect to the visit detail page
     return templates.TemplateResponse(

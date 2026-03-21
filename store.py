@@ -1,7 +1,44 @@
-from models import Company
+from models import Company, VisitRecord
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+
+
+# 1. Define file path FIRST
+BASE_DIR = Path(__file__).resolve().parent
+VISITS_FILE = BASE_DIR / "data" / "visits.json"
+VISITS_FILE.parent.mkdir(exist_ok=True)
+
+
+# 2. Define load/save helpers
+def load_visits():
+    if not VISITS_FILE.exists():
+        print("file not found")
+        return []
+    try:
+        print("Loading visits from:", VISITS_FILE)
+        raw = json.loads(VISITS_FILE.read_text())
+        visits = [VisitRecord.model_validate(v) for v in raw]
+        print("Loaded", len(visits), "visits")
+        return visits
+    except Exception as e:
+        print("Error loading visits:", e)
+        return []
+    
+
+def save_visits(visits):
+    data = [v.model_dump(mode="json") for v in visits]
+    VISITS_FILE.write_text(json.dumps(data, indent=2))
+
+# 3. Initialize global store AFTER helpers exist
+VISIT_STORE = load_visits()  
+
+# 4. add_visit helper
+def add_visit(record: VisitRecord):
+    VISIT_STORE.append(record)
+    save_visits(VISIT_STORE)
+    return record
+
 
 class Store:
     def __init__(self):
@@ -38,18 +75,18 @@ class Store:
 
 # Global instance
 store = Store()
-VISIT_STORE = []
+# DO NOT reset VISIT_STORE here
+#VISIT_STORE = []
 
-
-FREENOTES_FILE = Path("data/freenotes.json")
+store.FREENOTES_FILE = BASE_DIR / "data" / "freenotes.json"
 
 def load_freenotes():
-    if not FREENOTES_FILE.exists():
+    if not store.FREENOTES_FILE.exists():
         return []
-    return json.loads(FREENOTES_FILE.read_text())
+    return json.loads(store.FREENOTES_FILE.read_text())
 
 def save_freenotes(notes):
-    FREENOTES_FILE.write_text(json.dumps(notes, indent=2))
+    store.FREENOTES_FILE.write_text(json.dumps(notes, indent=2))
 
 
 def add_freenote(text, template_type=None):
