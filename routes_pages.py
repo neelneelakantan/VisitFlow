@@ -8,6 +8,7 @@ from store import load_freenotes, add_freenote, add_visit
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
+from typing import Optional
 
 router = APIRouter()
 
@@ -151,27 +152,74 @@ def create_company_form(
     return RedirectResponse("/companies", status_code=303)
 
 
-@router.get("/companies/{company_id}", response_class=HTMLResponse)
-def company_detail_page(request: Request, company_id: int):
+@router.get("/companies/{company_id}")
+def company_detail(request: Request, company_id: int):
     company = store.store.get_company(company_id)
-    next_check = compute_next_check(company)
-    if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Get all visits for this company
+    visits = [
+        v for v in store.VISIT_STORE
+        if v.company_id == company_id
+    ]
+
+    # Sort newest first
+    visits.sort(key=lambda v: v.timestamp, reverse=True)
+
+    # Enrich visits for display
+    enriched = []
+    for v in visits[:3]:  # last 3 visits
+        local_ts = v.timestamp.astimezone()
+        ts_str = local_ts.strftime("%b %d, %Y %I:%M %p")
+
+        sentiment = None
+        energy = None
+        if v.insights and "sentiment_energy" in v.insights:
+            sentiment = v.insights["sentiment_energy"].get("sentiment")
+            energy = v.insights["sentiment_energy"].get("energy")
+
+        enriched.append({
+            "id": v.visit_id,
+            "timestamp": ts_str,
+            "summary": v.structured_summary,
+            "sentiment": sentiment,
+            "energy": energy,
+        })
 
     return templates.TemplateResponse(
         "detail.html",
         {
             "request": request,
             "company": company,
-            "next_check": next_check,
+            "recent_visits": enriched,
+            "has_visits": len(visits) > 0,
+            "last_visit": enriched[0] if enriched else None,
         }
     )
 
 
-
 @router.post("/companies/{company_id}/visit")
 async def visit_now(company_id: int):
-    store.store.mark_visited(company_id)
+    company = store.store.get_company(company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    company.last_checked = datetime.now(timezone.utc)
+    company.updated_at = datetime.now(timezone.utc)
+
+    # Create a blank visit record
+    record = VisitRecord(
+        raw_notes="",
+        normalized_notes=None,
+        structured_summary=None,
+        insights=None,
+        recommended_next_steps=None,
+        tags=None,
+        confidence=None,
+        narrative=None
+    )
+
+    add_visit(record, company_id)
+
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 
@@ -196,55 +244,102 @@ def test_page(request: Request):
 
 @router.get("/timeline")
 def timeline(request: Request):
-    visits = [
-        {
-            "visit_id": v.visit_id,
-            "timestamp": v.timestamp,
-            "summary": v.structured_summary.get("key_points", []),
-            "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
-            "energy": v.insights.get("sentiment_energy", {}).get("energy")
-        }
-        for v in store.VISIT_STORE
-    ]
+    visits = store.VISIT_STORE
+
+    enriched = []
+    for v in visits:
+        # Convert timestamp to local timezone
+        local_ts = v.timestamp.astimezone()
+
+        # Format timestamp for readability
+        ts_str = local_ts.strftime("%b %d, %Y %I:%M %p")
+
+        # Company lookup
+        company = None
+        if v.company_id is not None:
+            company = store.store.get_company(v.company_id)
+
+        # Notes preview
+        preview = ""
+        if v.raw_notes:
+            preview = v.raw_notes[:80] + ("..." if len(v.raw_notes) > 80 else "")
+
+        sentiment = None
+        energy = None
+        if v.insights and "sentiment_energy" in v.insights:
+            sentiment = v.insights["sentiment_energy"].get("sentiment")
+            energy = v.insights["sentiment_energy"].get("energy")
+
+        enriched.append({
+            "id": v.visit_id,
+            "timestamp": ts_str,
+            "company": company,
+            "sentiment": sentiment,
+            "energy": energy,
+            "summary": v.structured_summary,
+            "preview": preview,
+        })
 
     return templates.TemplateResponse(
         "timeline.html",
-        {"request": request, "visits": visits}
+        {"request": request, "visits": enriched}
     )
 
+
+
 @router.get("/visit/{visit_id}")
-def visit_detail(visit_id: str, request: Request):
-    # Find the visit
-    for v in store.VISIT_STORE:
-        if v.visit_id == visit_id:
-            return templates.TemplateResponse(
-                "visit_detail.html",
-                {"request": request, "visit": v}
-            )
+def visit_detail(request: Request, visit_id: str):
+    visit = store.get_visit(visit_id)
+
+    company = None
+    if visit.company_id is not None:
+        company = store.store.get_company(visit.company_id)
 
     return templates.TemplateResponse(
         "visit_detail.html",
-        {"request": request, "visit": None}
+        {
+            "request": request,
+            "visit": visit,
+            "company": company
+        }
     )
 
 
 @router.get("/new")
-def new_visit_form(request: Request):
+def new_visit(request: Request, company_id: Optional[int] = None):
+    company = None
+    if company_id:
+        company = store.store.get_company(int(company_id))
+
     return templates.TemplateResponse(
         "new_visit.html",
-        {"request": request}
+        {
+            "request": request,
+            "company_id": company_id,
+            "company": company
+        }
     )
+
 
 @router.post("/new")
-def submit_new_visit(request: Request, notes: str = Form(...)):
-    record = build_visit_record(notes)
-    add_visit(record)
+def submit_visit(
+    request: Request,
+    notes: str = Form(...),
+    company_id: str = Form(None)
+):
+    # Normalize company_id
+    if company_id in (None, "", "None"):
+        company_id_int = None
+    else:
+        company_id_int = int(company_id)
 
-    # Redirect to the visit detail page
-    return templates.TemplateResponse(
-        "visit_detail.html",
-        {"request": request, "visit": record}
-    )
+    # Run notes through the full pipeline
+    record = build_visit_record(notes)
+
+    # Save visit with company context
+    add_visit(record, company_id_int)
+
+    return RedirectResponse("/timeline", status_code=303)
 
 
 @router.get("/freenotes")

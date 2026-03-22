@@ -1,44 +1,96 @@
+<style>
+    .section {
+        margin-bottom: 20px;
+    }
+    .section h2 {
+        margin-bottom: 8px;
+    }
+</style>
 {% extends "base.html" %}
 
 {% block content %}
 
 {% if visit %}
-
 <h1>Visit Details</h1>
 
-<p><strong>Timestamp:</strong> {{ visit.timestamp }}</p>
+<p><strong>Date:</strong> {{ visit.timestamp.astimezone().strftime("%b %d, %Y %I:%M %p") }}</p>
+
+{% if company %}
+    <p><strong>Company:</strong>
+        <a href="/companies/{{ company.company_id }}">{{ company.name }}</a>
+    </p>
+{% else %}
+    <p><strong>Company:</strong> No company</p>
+{% endif %}
+
+<hr>
+
+<h2>Narrative</h2>
+{% if visit.narrative %}
+    <p>{{ visit.narrative }}</p>
+{% else %}
+    <p><em>No narrative available.</em></p>
+{% endif %}
+
+<hr>
 
 <h2>Summary</h2>
-<ul>
-    {% for item in visit.structured_summary.key_points %}
-        <li>{{ item }}</li>
-    {% endfor %}
-</ul>
+{% if visit.structured_summary and visit.structured_summary.key_points %}
+    <ul>
+        {% for item in visit.structured_summary.key_points %}
+            <li>{{ item }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p><em>No summary available.</em></p>
+{% endif %}
+
+<hr>
 
 <h2>Insights</h2>
-<ul>
-    {% for key, value in visit.insights.items() %}
-        <li><strong>{{ key }}:</strong> {{ value }}</li>
-    {% endfor %}
-</ul>
+{% if visit.insights %}
+    <ul>
+        {% for key, value in visit.insights.items() %}
+            <li><strong>{{ key }}:</strong> {{ value }}</li>
+        {% endfor %}
+    </ul>
+{% else %}
+    <p><em>No insights available.</em></p>
+{% endif %}
+
+<hr>
 
 <h2>Sentiment & Energy</h2>
 <p>
-    <strong>Sentiment:</strong> {{ visit.insights.sentiment_energy.sentiment }}<br>
-    <strong>Energy:</strong> {{ visit.insights.sentiment_energy.energy }}
+    {% if visit.insights and visit.insights.sentiment_energy %}
+        Sentiment: {{ visit.insights.sentiment_energy.sentiment }}<br>
+        Energy: {{ visit.insights.sentiment_energy.energy }}
+    {% else %}
+        Sentiment: None<br>
+        Energy: None
+    {% endif %}
 </p>
 
-<h2>Narrative</h2>
-<p>{{ visit.narrative }}</p>
+<hr>
 
 <p><a href="/timeline">← Back to Timeline</a></p>
+
+{% if company %}
+    <p><a href="/companies/{{ company.company_id }}">← Back to {{ company.name }}</a></p>
+{% endif %}
 
 {% else %}
 
 <h1>Visit Not Found</h1>
 <p>The visit you are trying to view does not exist.</p>
-<p><a href="/timeline">← Back to Timeline</a></p>
 
+<p>
+    <a href="/timeline">Timeline</a> /
+    {% if company %}
+        <a href="/companies/{{ company.company_id }}">{{ company.name }}</a> /
+    {% endif %}
+    Visit Details
+</p>
 {% endif %}
 
 {% endblock %}

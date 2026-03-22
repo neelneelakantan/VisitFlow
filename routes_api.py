@@ -80,8 +80,24 @@ def visit_company(company_id: int):
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    # Update company metadata
     company.last_checked = datetime.now(timezone.utc)
     company.updated_at = datetime.now(timezone.utc)
+
+    # Create a blank visit record
+    record = VisitRecord(
+        raw_notes="",
+        normalized_notes=None,
+        structured_summary=None,
+        insights=None,
+        recommended_next_steps=None,
+        tags=None,
+        confidence=None,
+        narrative=None
+    )
+
+    add_visit(record, company_id)
+
     return company
 
 
@@ -129,15 +145,12 @@ def get_overdue_companies():
 class VisitInput(BaseModel):
     notes: str
 
-@router.post("/visit", response_model=VisitRecord)
-def process_visit(input: VisitInput):
-    """
-    Accept raw notes from the user and run them through
-    the full VisitFlow transformation pipeline.
-    """
+
+@router.post("/visit")
+def create_visit(input: VisitInput, company_id: Optional[int] = None):
     record = build_visit_record(input.notes)
-    add_visit(record)
-    return record
+    return add_visit(record, company_id)
+
 
 @router.get("/visits")
 def list_visits():

@@ -55,6 +55,7 @@ class ApplyNote(BaseModel):
 class VisitRecord(BaseModel):
     visit_id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    company_id: Optional[int] = None
 
     raw_notes: str
     normalized_notes: Optional[str] = None

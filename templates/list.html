@@ -54,7 +54,7 @@
 <div style="margin-top: 20px;">
 
     {% if has_prev %}
-        <a href="/?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
+        <a href="/companies?page={{ page - 1 }}{% if q %}&q={{ q }}{% endif %}">Previous</a>
     {% endif %}
 
     <span style="margin: 0 10px;">
@@ -62,7 +62,7 @@
     </span>
 
     {% if has_next %}
-        <a href="/?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}">Next</a>
+        <a href="/companies?page={{ page + 1 }}{% if q %}&q={{ q }}{% endif %}">Next</a>
     {% endif %}
 
 </div>

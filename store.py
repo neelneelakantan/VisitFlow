@@ -13,13 +13,10 @@ VISITS_FILE.parent.mkdir(exist_ok=True)
 # 2. Define load/save helpers
 def load_visits():
     if not VISITS_FILE.exists():
-        print("file not found")
         return []
     try:
-        print("Loading visits from:", VISITS_FILE)
         raw = json.loads(VISITS_FILE.read_text())
         visits = [VisitRecord.model_validate(v) for v in raw]
-        print("Loaded", len(visits), "visits")
         return visits
     except Exception as e:
         print("Error loading visits:", e)
@@ -34,10 +31,17 @@ def save_visits(visits):
 VISIT_STORE = load_visits()  
 
 # 4. add_visit helper
-def add_visit(record: VisitRecord):
+def add_visit(record: VisitRecord, company_id: int):
+    record.company_id = company_id
     VISIT_STORE.append(record)
     save_visits(VISIT_STORE)
     return record
+
+def get_visit(visit_id: str):
+    for v in VISIT_STORE:
+        if v.visit_id == visit_id:
+            return v
+    return None
 
 
 class Store:

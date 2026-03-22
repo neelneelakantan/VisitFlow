@@ -1,24 +1,25 @@
 {% extends "base.html" %}
 
 {% block content %}
-<h1>New Visit</h1>
-
+<h1>
+    {% if company %}
+        New Visit for {{ company.name }}
+    {% else %}
+        New Visit
+    {% endif %}
+</h1>
 <form action="/new" method="post">
+    <input type="hidden" name="company_id" value="{{ company_id }}">
     <label for="notes"><strong>Notes</strong></label><br>
     <textarea id="notes" name="notes" rows="8" style="width:100%;"></textarea>
 
     <br><br>
-    <button type="submit" style="
-        padding: 0.6rem 1.2rem;
-        background: #3182ce;
-        color: white;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-    ">
-        Submit
-    </button>
+    <button type="submit">Submit</button>
 </form>
+
+{% if company %}
+    <p><a href="/companies/{{ company.id }}">← Back to {{ company.name }}</a></p>
+{% endif %}
 
 <p><a href="/timeline">← Back to Timeline</a></p>
 {% endblock %}

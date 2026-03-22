@@ -9,7 +9,7 @@
 <ul>
 {% for note in notes %}
     <li>
-        <strong>{{ note.timestamp }}</strong><br>
+        <strong>{{ note.timestamp | replace("T", " ") | replace("Z", "") }}</strong><br>
         {{ note.text }}
         <hr>
     </li>

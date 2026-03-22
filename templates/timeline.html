@@ -2,22 +2,46 @@
 
 {% block content %}
 <h1>Timeline</h1>
-
+<p><a href="/new">+ Add Visit</a></p>
 {% if visits %}
     <ul>
         {% for v in visits %}
-            <li style="margin-bottom: 1rem;">
-                <a href="/visit/{{ v.visit_id }}">
-                    <strong>{{ v.timestamp }}</strong>
-                </a>
-                <br>
-                <em>Sentiment:</em> {{ v.sentiment }},
-                <em>Energy:</em> {{ v.energy }}
-                <br>
-                <em>Summary:</em>
-                {{ v.summary | join(", ") }}
-            </li>
-        {% endfor %}
+        <div style="margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #ddd;">
+
+            <div style="font-weight: bold;">
+                {{ v.timestamp }}
+                {% if v.company %}
+                    — <a href="/companies/{{ v.company.company_id }}">{{ v.company.name }}</a>
+                {% else %}
+                    — No company
+                {% endif %}
+            </div>
+
+            <div>
+                Sentiment: {{ v.sentiment or "None" }},
+                Energy: {{ v.energy or "None" }}
+            </div>
+
+            {% if v.summary and v.summary.key_points %}
+                <div><strong>Summary:</strong>
+                    <ul>
+                        {% for item in v.summary.key_points %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+            {% endif %}
+
+            {% if v.preview %}
+                <div><strong>Notes:</strong> {{ v.preview }}</div>
+            {% endif %}
+
+            <div>
+                <a href="/visit/{{ v.id }}">View Details</a>
+            </div>
+
+        </div>
+        {% endfor %}    
     </ul>
 {% else %}
     <p>No visits yet. Add one using the API or UI.</p>
