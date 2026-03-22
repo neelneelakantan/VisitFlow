@@ -43,4 +43,13 @@
 {% endfor %}
 </ul>
 
+
+<h3>No Due date</h3>
+<ul>
+{% for c in no_duedate %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
 {% endblock %}

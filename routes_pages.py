@@ -3,8 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
-import store
-from store import load_freenotes, add_freenote, add_visit
+from store import load_freenotes, add_freenote, add_visit, instance, VISIT_STORE, save_companies, get_visit
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
@@ -14,7 +13,7 @@ router = APIRouter()
 
 @router.get("/")
 def dashboard_page(request: Request):
-    companies = store.store.list_companies()
+    companies = instance.list_companies()
     today = datetime.now(timezone.utc).date()
 
     total = len(companies)
@@ -23,15 +22,18 @@ def dashboard_page(request: Request):
     due_today = []
     upcoming = []
     never_checked = []
+    no_duedate = []
 
     for c in companies:
         next_check = compute_next_check(c)
 
         if next_check is None:
+            no_duedate.append(c)
             continue
 
         next_date = next_check.date()
 
+        ### need to build logic for secific as welll
         if c.last_checked is None:
             never_checked.append(c)
         elif next_date < today:
@@ -49,6 +51,7 @@ def dashboard_page(request: Request):
             "overdue": overdue,
             "due_today": due_today,
             "upcoming": upcoming,
+            "no_duedate" : no_duedate,
             "never_checked": never_checked,
         }
     )
@@ -62,7 +65,7 @@ def list_companies_page(
     page_size: int = 20
 ):
     today = datetime.now(timezone.utc).date()
-    companies = store.store.list_companies()
+    companies = instance.list_companies()
 
     # --- Search filter ---
     if q:
@@ -148,26 +151,53 @@ def create_company_form(
         frequency=frequency,
         specific_date=specific_date,
     )
-    store.store.add_company(company)
+    instance.add_company(company)
     return RedirectResponse("/companies", status_code=303)
+
 
 
 @router.get("/companies/{company_id}")
 def company_detail(request: Request, company_id: int):
-    company = store.store.get_company(company_id)
+    company = instance.get_company(company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
 
-    # Get all visits for this company
+    # Compute next check
+    next_check = compute_next_check(company)
+
+    # Compute status flags
+    is_overdue = False
+    is_due_today = False
+    is_upcoming = False
+
+    if next_check:
+        now = datetime.now(timezone.utc)
+        due = next_check
+
+        if due.tzinfo is None:
+            due = due.replace(tzinfo=timezone.utc)
+
+        if due < now:
+            is_overdue = True
+        elif due.date() == now.date():
+            is_due_today = True
+        else:
+            is_upcoming = True
+
+    # -----------------------------
+    # REAL VISIT LOADING LOGIC
+    # -----------------------------
     visits = [
-        v for v in store.VISIT_STORE
+        v for v in VISIT_STORE
         if v.company_id == company_id
     ]
 
     # Sort newest first
     visits.sort(key=lambda v: v.timestamp, reverse=True)
 
-    # Enrich visits for display
+    # Enrich for UI (last 3 visits)
     enriched = []
-    for v in visits[:3]:  # last 3 visits
+    for v in visits[:3]:
         local_ts = v.timestamp.astimezone()
         ts_str = local_ts.strftime("%b %d, %Y %I:%M %p")
 
@@ -193,18 +223,26 @@ def company_detail(request: Request, company_id: int):
             "recent_visits": enriched,
             "has_visits": len(visits) > 0,
             "last_visit": enriched[0] if enriched else None,
+            "next_check": next_check,
+            "is_overdue": is_overdue,
+            "is_due_today": is_due_today,
+            "is_upcoming": is_upcoming,
         }
     )
 
 
+
+
 @router.post("/companies/{company_id}/visit")
 async def visit_now(company_id: int):
-    company = store.store.get_company(company_id)
+    company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
     company.last_checked = datetime.now(timezone.utc)
     company.updated_at = datetime.now(timezone.utc)
+    
+    instance.mark_visited(company_id)
 
     # Create a blank visit record
     record = VisitRecord(
@@ -225,9 +263,24 @@ async def visit_now(company_id: int):
 
 @router.post("/companies/{company_id}/apply")
 async def apply_now(company_id: int):
-    store.store.mark_applied(company_id)
-    return RedirectResponse(f"/companies/{company_id}", status_code=303)
+    company = instance.get_company(company_id)
+    if company is None:
+        raise HTTPException(status_code=404, detail="Company not found")
 
+    # Update applied timestamp
+    instance.mark_applied(company_id)
+
+    # --- Option A: Auto‑add a simple note ---
+    # TODO: Option B — allow user to enter a custom note before applying
+    timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
+    entry = f"[{timestamp}] Applied via UI"
+
+    company.notes = (company.notes + "\n" + entry).strip()
+
+    # Persist to disk
+    save_companies(list(instance.companies.values()))
+
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
 @router.get("/api-explorer", response_class=HTMLResponse)
 def api_explorer(request: Request):
@@ -244,7 +297,7 @@ def test_page(request: Request):
 
 @router.get("/timeline")
 def timeline(request: Request):
-    visits = store.VISIT_STORE
+    visits = VISIT_STORE
 
     enriched = []
     for v in visits:
@@ -257,7 +310,7 @@ def timeline(request: Request):
         # Company lookup
         company = None
         if v.company_id is not None:
-            company = store.store.get_company(v.company_id)
+            company = instance.get_company(v.company_id)
 
         # Notes preview
         preview = ""
@@ -289,11 +342,11 @@ def timeline(request: Request):
 
 @router.get("/visit/{visit_id}")
 def visit_detail(request: Request, visit_id: str):
-    visit = store.get_visit(visit_id)
+    visit = get_visit(visit_id)
 
     company = None
     if visit.company_id is not None:
-        company = store.store.get_company(visit.company_id)
+        company = instance.get_company(visit.company_id)
 
     return templates.TemplateResponse(
         "visit_detail.html",
@@ -309,7 +362,7 @@ def visit_detail(request: Request, visit_id: str):
 def new_visit(request: Request, company_id: Optional[int] = None):
     company = None
     if company_id:
-        company = store.store.get_company(int(company_id))
+        company = instance.get_company(int(company_id))
 
     return templates.TemplateResponse(
         "new_visit.html",
@@ -357,10 +410,14 @@ def freenotes_new_page(request: Request):
         "freenotes_new.html",
         {"request": request}
     )
+ 
+@router.get("/freenotes")
+def freenotes_list_page(request: Request):
+    notes = load_freenotes()
+    notes = sorted(notes, key=lambda n: n["timestamp"], reverse=True)
+    return templates.TemplateResponse(
+        "freenotes_list.html",
+        {"request": request, "notes": notes}
+   )
 
-
-@router.post("/freenotes/new")
-def freenotes_new_submit(request: Request, text: str = Form(...)):
-    add_freenote(text)
-    return RedirectResponse(url="/freenotes", status_code=303)
 

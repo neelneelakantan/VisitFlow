@@ -20,6 +20,9 @@
             <span class="overdue">• Overdue</span>
         {% endif %}
     </div>
+        <div>
+            <a href="{{ item.company.url }}" target="_blank">{{ item.company.url }}</a>
+        </div>
 
     <div class="value-{{ item.company.value }}">
         Value: {{ item.company.value }}

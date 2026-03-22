@@ -7,8 +7,7 @@ from pydantic import BaseModel
 
 from models import Company, CompanyCreate, CompanyUpdate, ApplyNote, VisitRecord
 from pipeline import build_visit_record
-import store
-from store import load_freenotes, add_freenote, add_visit
+from store import load_freenotes, add_freenote, add_visit, instance, save_companies
 from utils import compute_next_check
 
 
@@ -20,7 +19,7 @@ router = APIRouter()
 # -----------------------------
 @router.get("/companies")
 def list_companies():
-    return store.store.list_companies()
+    return instance.list_companies()
 
 
 # -----------------------------
@@ -41,7 +40,7 @@ def create_company(payload: CompanyCreate):
         notes=payload.notes or "",
         created_at=datetime.now(timezone.utc),
     )
-    return store.store.add_company(company)
+    return instance.add_company(company)
 
 
 # -----------------------------
@@ -49,25 +48,9 @@ def create_company(payload: CompanyCreate):
 # -----------------------------
 @router.get("/companies/{company_id}")
 def get_company(company_id: int):
-    company = store.store.get_company(company_id)
+    company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
-    return company
-
-
-# -----------------------------
-# UPDATE COMPANY
-# -----------------------------
-@router.put("/companies/{company_id}")
-def update_company(company_id: int, payload: CompanyUpdate):
-    company = store.store.get_company(company_id)
-    if company is None:
-        raise HTTPException(status_code=404, detail="Company not found")
-
-    for field, value in payload.dict(exclude_unset=True).items():
-        setattr(company, field, value)
-
-    company.updated_at = datetime.now(timezone.utc)
     return company
 
 
@@ -76,7 +59,7 @@ def update_company(company_id: int, payload: CompanyUpdate):
 # -----------------------------
 @router.post("/companies/{company_id}/visit")
 def visit_company(company_id: int):
-    company = store.store.get_company(company_id)
+    company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -106,7 +89,7 @@ def visit_company(company_id: int):
 # -----------------------------
 @router.post("/companies/{company_id}/apply")
 def apply_company(company_id: int, payload: ApplyNote):
-    company = store.store.get_company(company_id)
+    company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
@@ -115,6 +98,7 @@ def apply_company(company_id: int, payload: ApplyNote):
 
     company.notes = (company.notes + "\n" + entry).strip()
     company.updated_at = datetime.now(timezone.utc)
+    save_companies(list(instance.companies.values()))
     return company
 
 
@@ -128,7 +112,7 @@ def get_overdue_companies():
     today = datetime.now(timezone.utc).date()
     overdue = []
 
-    for company in store.store.list_companies():
+    for company in instance.list_companies():
         if company.status != "active":
             continue
 
@@ -162,13 +146,13 @@ def list_visits():
             "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
             "energy": v.insights.get("sentiment_energy", {}).get("energy")
         }
-        for v in store.VISIT_STORE
+        for v in instance.VISIT_STORE
     ]
 
 
 @router.get("/visit/{visit_id}")
 def get_visit(visit_id: str):
-    for v in store.VISIT_STORE:
+    for v in instance.VISIT_STORE:
         if v.visit_id == visit_id:
             return v
     return {"error": "Visit not found"}

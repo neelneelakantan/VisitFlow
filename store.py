@@ -9,6 +9,9 @@ BASE_DIR = Path(__file__).resolve().parent
 VISITS_FILE = BASE_DIR / "data" / "visits.json"
 VISITS_FILE.parent.mkdir(exist_ok=True)
 
+COMPANIES_FILE = BASE_DIR / "data" / "companies.json"
+COMPANIES_FILE.parent.mkdir(exist_ok=True)
+
 
 # 2. Define load/save helpers
 def load_visits():
@@ -27,8 +30,30 @@ def save_visits(visits):
     data = [v.model_dump(mode="json") for v in visits]
     VISITS_FILE.write_text(json.dumps(data, indent=2))
 
+
+def load_companies():
+    """Load companies from disk into a list of Company models."""
+    if not COMPANIES_FILE.exists():
+        return []
+
+    try:
+        raw = json.loads(COMPANIES_FILE.read_text())
+        companies = [Company.model_validate(c) for c in raw]
+        return companies
+    except Exception as e:
+        print("Error loading companies:", e)
+        return []
+
+
+def save_companies(companies):
+    """Persist list of Company models to disk."""
+    data = [c.model_dump(mode="json") for c in companies]
+    COMPANIES_FILE.write_text(json.dumps(data, indent=2))
+
+
 # 3. Initialize global store AFTER helpers exist
 VISIT_STORE = load_visits()  
+COMPANY_STORE = load_companies()
 
 # 4. add_visit helper
 def add_visit(record: VisitRecord, company_id: int):
@@ -46,51 +71,70 @@ def get_visit(visit_id: str):
 
 class Store:
     def __init__(self):
-        self.data = {}
-        self.next_id = 1
+        # Load companies from disk
+        companies = load_companies()
+
+        # Convert list → dict keyed by company.id
+        self.companies = {c.id: c for c in companies}
+
+        # Compute next_id safely
+        if companies:
+            self.next_id = max(c.id for c in companies) + 1
+        else:
+            self.next_id = 1
+
 
     def add_company(self, company: Company):
         company.id = self.next_id
-        self.data[self.next_id] = company
+        self.companies[self.next_id] = company
         self.next_id += 1
+
+        # Persist to disk
+        save_companies(list(self.companies.values()))
         return company
+
 
     def get_company(self, company_id: int):
-        return self.data.get(company_id)
+        return self.companies.get(company_id)
+    
 
     def list_companies(self):
-        return list(self.data.values())
+        return list(self.companies.values())
 
-    def update_company(self, company_id: int, **fields):
-        company = self.data[company_id]
-        for key, value in fields.items():
-            setattr(company, key, value)
-        return company
 
     def mark_visited(self, company_id: int):
-        company = self.data[company_id]
+        company = self.companies[company_id]
         company.last_checked = datetime.now(timezone.utc)
+
+        save_companies(list(self.companies.values()))
         return company
+
 
     def mark_applied(self, company_id: int):
-        company = self.data[company_id]
-        company.last_applied = datetime.now(timezone.utc)
+        company = self.companies[company_id]
+        now = datetime.now(timezone.utc)
+
+        company.last_applied = now
+        company.updated_at = now
+
+        save_companies(list(self.companies.values()))
         return company
 
+
 # Global instance
-store = Store()
+instance = Store()
 # DO NOT reset VISIT_STORE here
 #VISIT_STORE = []
 
-store.FREENOTES_FILE = BASE_DIR / "data" / "freenotes.json"
+instance.FREENOTES_FILE = BASE_DIR / "data" / "freenotes.json"
 
 def load_freenotes():
-    if not store.FREENOTES_FILE.exists():
+    if not instance.FREENOTES_FILE.exists():
         return []
-    return json.loads(store.FREENOTES_FILE.read_text())
+    return json.loads(instance.FREENOTES_FILE.read_text())
 
 def save_freenotes(notes):
-    store.FREENOTES_FILE.write_text(json.dumps(notes, indent=2))
+    instance.FREENOTES_FILE.write_text(json.dumps(notes, indent=2))
 
 
 def add_freenote(text, template_type=None):

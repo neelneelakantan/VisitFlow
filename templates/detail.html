@@ -2,6 +2,7 @@
 {% block content %}
 
 <h2>{{ company.name }}</h2>
+
 {% if last_visit %}
     <p>
         <strong>Last Visit:</strong> {{ last_visit.timestamp }}<br>
@@ -13,17 +14,13 @@
     </p>
 {% endif %}
 
-{% if company.next_check %}
-    {% set due = company.next_check.astimezone() %}
-    {% set now = now().astimezone() %}
-
-    {% if due < now %}
-        <span style="color: red; font-weight: bold;">Overdue</span>
-    {% elif due.date() == now.date() %}
-        <span style="color: orange; font-weight: bold;">Due Today</span>
-    {% else %}
-        <span style="color: green; font-weight: bold;">Upcoming</span>
-    {% endif %}
+{# --- Next Check Badge (computed in route) --- #}
+{% if is_overdue %}
+    <span style="color: red; font-weight: bold;">Overdue</span>
+{% elif is_due_today %}
+    <span style="color: orange; font-weight: bold;">Due Today</span>
+{% elif is_upcoming %}
+    <span style="color: green; font-weight: bold;">Upcoming</span>
 {% endif %}
 
 <h2>Recent Visits</h2>
@@ -61,16 +58,28 @@
         padding: 2px 0;
     }
 </style>
+
 <h3>Company Info</h3>
 <div class="meta-grid">
+
     <div><strong>Value:</strong> {{ company.value }}</div>
     <div><strong>Cadence:</strong> {{ company.cadence_days }} days</div>
 
     <div><strong>Frequency:</strong> {{ company.frequency }}</div>
+
     <div>
         <strong>Last checked:</strong>
         {% if company.last_checked %}
             {{ company.last_checked.astimezone().strftime("%Y-%m-%d %H:%M:%S") }}
+        {% else %}
+            Never
+        {% endif %}
+    </div>
+
+    <div>
+        <strong>Last applied:</strong>
+        {% if company.last_applied %}
+            {{ company.last_applied.astimezone().strftime("%Y-%m-%d %H:%M:%S") }}
         {% else %}
             Never
         {% endif %}
@@ -90,9 +99,11 @@
             <strong>Specific Date:</strong> {{ company.specific_date }}
         {% endif %}
     </div>
+
 </div>
+
 <!-- Visit Now button -->
- <form action="/new" method="get">
+<form action="/new" method="get">
     <input type="hidden" name="company_id" value="{{ company.id }}">
     <button type="submit">Visit Now</button>
 </form>
@@ -105,4 +116,5 @@
 
 <h3>Notes</h3>
 <pre>{{ company.notes }}</pre>
+
 {% endblock %}
