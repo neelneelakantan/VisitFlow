@@ -22,10 +22,10 @@
                 Energy: {{ v.energy or "None" }}
             </div>
 
-            {% if v.summary and v.summary.key_points %}
+            {% if v.summary and v.summary["key_points"] %}
                 <div><strong>Summary:</strong>
                     <ul>
-                        {% for item in v.summary.key_points %}
+                        {% for item in v.summary["key_points"] %}
                             <li>{{ item }}</li>
                         {% endfor %}
                     </ul>

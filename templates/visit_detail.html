@@ -17,7 +17,7 @@
 
 {% if company %}
     <p><strong>Company:</strong>
-        <a href="/companies/{{ company.company_id }}">{{ company.name }}</a>
+        <a href="/companies/{{ company.id }}">{{ company.name }}</a>
     </p>
 {% else %}
     <p><strong>Company:</strong> No company</p>
@@ -87,7 +87,8 @@
 <p>
     <a href="/timeline">Timeline</a> /
     {% if company %}
-        <a href="/companies/{{ company.company_id }}">{{ company.name }}</a> /
+        <a href="/companies/{{ company.id }}">{{ company.name }}</a>
+        
     {% endif %}
     Visit Details
 </p>

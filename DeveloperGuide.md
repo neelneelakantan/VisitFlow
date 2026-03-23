@@ -193,14 +193,10 @@ This ensures predictable behavior even during reloads.
 
 # 7.1 Local‑Only Execution (Security Boundary)
 
-VisitFlow is intentionally designed to run **only on 127.0.0.1** in MVP 1.0.  
-This is the security boundary: the app is not exposed to the network, so no
-authentication, session management, or HTTPS is required.
-
-VisitFlow is intended to run on 127.0.0.1 in MVP 1.0. OS and browser warnings 
-provide sufficient protection if bound to other interfaces. If someone attempts
-to start the server with a different host (for example `0.0.0.0` or a LAN IPv4
-address), VisitFlow will refuse to start.
+VisitFlow is intended to run on 127.0.0.1 in MVP 1.0.  
+This is a usage boundary, not a hard technical restriction.  
+If you bind the server to another interface (e.g., 0.0.0.0 or a LAN IPv4 address),  
+your OS and browser will warn you. These natural layers are sufficient for MVP 1.0.
 
 This keeps the system private, predictable, and aligned with the human‑centered
 philosophy of MVP 1.0.

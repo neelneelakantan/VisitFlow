@@ -30,15 +30,13 @@
         {% for v in recent_visits %}
             <li>
                 <strong>{{ v.timestamp }}</strong><br>
-                {% if v.summary %}
-                    {% if v.summary and v.summary.key_points %}
-                        Summary:
-                        <ul>
-                            {% for item in v.summary.key_points %}
-                                <li>{{ item }}</li>
-                            {% endfor %}
-                        </ul>
-                    {% endif %}
+                {% if v.summary and v.summary["key_points"] %}
+                    Summary:
+                    <ul>
+                        {% for item in v.summary["key_points"] %}
+                            <li>{{ item }}</li>
+                        {% endfor %}
+                    </ul>
                 {% endif %}
                 Sentiment: {{ v.sentiment or "None" }},
                 Energy: {{ v.energy or "None" }}<br>
