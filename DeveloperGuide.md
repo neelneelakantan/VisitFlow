@@ -1,6 +1,4 @@
 
-# **DeveloperGuide.md**
-
 # **VisitFlow Developer Guide**
 
 This guide provides practical instructions for contributing to VisitFlow, understanding its architecture, and extending the system safely. It is intentionally concise, high‑signal, and aligned with the project’s layered design.
