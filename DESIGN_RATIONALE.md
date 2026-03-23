@@ -124,6 +124,29 @@ become relevant.
 
 ---
 
+## Why VisitFlow Does Not Include Login or Authentication in MVP 1.0
+
+VisitFlow is intentionally designed as a **local‑only** application in MVP 1.0.  
+The server binds to `127.0.0.1` and is not exposed to the network.  
+This eliminates the external attack surface and makes authentication unnecessary.
+
+Adding login at this stage would:
+
+- increase friction  
+- introduce UI and session‑management complexity  
+- require password storage or OS‑level integration  
+- distract from the core workflow goals  
+- create more cognitive load for the user  
+
+Authentication will be introduced only when VisitFlow supports:
+
+- remote hosting  
+- multi‑device access  
+- shared environments  
+- cloud or network‑accessible deployments  
+
+Until then, **local‑only execution is the security boundary**.
+
 # **5. Why No Application Tracking**
 
 This is a deliberate choice.
