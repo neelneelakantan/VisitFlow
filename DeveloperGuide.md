@@ -190,7 +190,48 @@ Guidelines:
 
 This ensures predictable behavior even during reloads.
 
----
+
+# 7.1 Local‑Only Execution (Security Boundary)
+
+VisitFlow is intentionally designed to run **only on 127.0.0.1** in MVP 1.0.  
+This is the security boundary: the app is not exposed to the network, so no
+authentication, session management, or HTTPS is required.
+
+A small guardrail in `main.py` enforces this behavior. If someone attempts to
+start the server with a different host (for example `0.0.0.0` or a LAN IPv4
+address), VisitFlow will refuse to start.
+
+This keeps the system private, predictable, and aligned with the human‑centered
+philosophy of MVP 1.0.
+
+## Testing the Boundary
+
+You can verify the guardrail works by trying:
+
+```
+uvicorn main:app --host=0.0.0.0 --port 8000
+```
+
+Expected behavior:
+
+- VisitFlow prints an error and exits immediately.
+- Windows or your browser may also warn you if you try to access a non‑localhost
+  HTTP address, which is an additional layer of protection.
+
+## Why This Matters
+
+Local‑only execution ensures:
+
+- privacy by default  
+- no accidental exposure on the LAN  
+- no need for login or password storage  
+- no TLS or certificate management  
+- no attack surface beyond the local machine  
+
+Authentication and remote access will be introduced only in future versions
+when VisitFlow supports multi‑device or networked use cases.
+
+
 
 # **8. Adding New Features Safely**
 
