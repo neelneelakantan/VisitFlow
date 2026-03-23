@@ -33,7 +33,7 @@ def dashboard_page(request: Request):
 
         next_date = next_check.date()
 
-        ### need to build logic for secific as welll
+        ### need to build logic for secific as well
         if c.last_checked is None:
             never_checked.append(c)
         elif next_date < today:
@@ -42,6 +42,8 @@ def dashboard_page(request: Request):
             due_today.append(c)
         elif today < next_date <= today + timedelta(days=7):
             upcoming.append(c)
+
+    # TODO sort the upcoming to be on shortest
 
     return templates.TemplateResponse(
         "dashboard.html",
