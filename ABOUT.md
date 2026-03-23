@@ -1,7 +1,4 @@
 
-
-# **ABOUT.md**
-
 # **About VisitFlow**
 
 VisitFlow is a lightweight, human‑centered workflow system designed to support intentional job‑search habits, reduce cognitive load, and bring structure to a process that is often chaotic, emotional, and unpredictable.
@@ -134,6 +131,3 @@ Stay human.
 Move at a sustainable pace.  
 Let tools support you — not overwhelm you.**
 
----
-
-If you want, I can also generate a **NOTICE** file (optional for Apache 2.0), or help you integrate this into the repo structure cleanly.
