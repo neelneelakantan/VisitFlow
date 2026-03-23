@@ -1,5 +1,4 @@
 
-# **CONTRIBUTING.md**
 
 # Contributing to VisitFlow
 
