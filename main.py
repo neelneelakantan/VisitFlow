@@ -1,10 +1,10 @@
 from fastapi import FastAPI
 from routes_api import router as api_router
 from routes_pages import router as pages_router
-
-# Enforce local-only execution for MVP 1.0
 import os
 import sys
+
+# Enforce local-only execution for MVP 1.0
 
 ALLOWED_HOST = "127.0.0.1"
 
