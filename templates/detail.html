@@ -31,7 +31,14 @@
             <li>
                 <strong>{{ v.timestamp }}</strong><br>
                 {% if v.summary %}
-                    Summary: {{ v.summary }}<br>
+                    {% if v.summary and v.summary.key_points %}
+                        Summary:
+                        <ul>
+                            {% for item in v.summary.key_points %}
+                                <li>{{ item }}</li>
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
                 {% endif %}
                 Sentiment: {{ v.sentiment or "None" }},
                 Energy: {{ v.energy or "None" }}<br>

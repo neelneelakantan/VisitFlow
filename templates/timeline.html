@@ -11,7 +11,7 @@
             <div style="font-weight: bold;">
                 {{ v.timestamp }}
                 {% if v.company %}
-                    — <a href="/companies/{{ v.company.company_id }}">{{ v.company.name }}</a>
+                    — <a href="/companies/{{ v.company.id }}">{{ v.company.name }}</a>
                 {% else %}
                     — No company
                 {% endif %}

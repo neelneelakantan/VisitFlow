@@ -197,8 +197,9 @@ VisitFlow is intentionally designed to run **only on 127.0.0.1** in MVP 1.0.
 This is the security boundary: the app is not exposed to the network, so no
 authentication, session management, or HTTPS is required.
 
-A small guardrail in `main.py` enforces this behavior. If someone attempts to
-start the server with a different host (for example `0.0.0.0` or a LAN IPv4
+VisitFlow is intended to run on 127.0.0.1 in MVP 1.0. OS and browser warnings 
+provide sufficient protection if bound to other interfaces. If someone attempts
+to start the server with a different host (for example `0.0.0.0` or a LAN IPv4
 address), VisitFlow will refuse to start.
 
 This keeps the system private, predictable, and aligned with the human‑centered

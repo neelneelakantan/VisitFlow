@@ -35,9 +35,9 @@
 <hr>
 
 <h2>Summary</h2>
-{% if visit.structured_summary and visit.structured_summary.key_points %}
+{% if visit.structured_summary and visit.structured_summary["key_points"] %}
     <ul>
-        {% for item in visit.structured_summary.key_points %}
+        {% for item in visit.structured_summary["key_points"] %}
             <li>{{ item }}</li>
         {% endfor %}
     </ul>

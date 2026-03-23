@@ -413,13 +413,4 @@ def freenotes_new_page(request: Request):
         {"request": request}
     )
  
-@router.get("/freenotes")
-def freenotes_list_page(request: Request):
-    notes = load_freenotes()
-    notes = sorted(notes, key=lambda n: n["timestamp"], reverse=True)
-    return templates.TemplateResponse(
-        "freenotes_list.html",
-        {"request": request, "notes": notes}
-   )
-
 
