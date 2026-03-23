@@ -215,6 +215,12 @@ Before making the repository public, the following were reviewed:
 - Apache 2.0 license added  
 - GitHub security features can be enabled (optional)
 
+VisitFlow runs only on `127.0.0.1` in MVP 1.0.  
+This local‑only boundary *is* the security model, and authentication is intentionally deferred.
+
+Because the server is not exposed to the network, the attack surface is effectively eliminated.  
+Authentication will be introduced only when VisitFlow supports remote access, multi‑device sync, or shared environments.
+
 ---
 
 # **Roadmap**
