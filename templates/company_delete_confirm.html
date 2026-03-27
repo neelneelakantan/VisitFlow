@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Delete Company: {{ company.name }}</h2>
+
+{% if visits %}
+    <p>This company has {{ visits|length }} associated visits.</p>
+    <p>What would you like to do?</p>
+
+    <form method="post" action="/company/{{ company.id }}/delete">
+        <input type="hidden" name="action" value="soft_delete">
+        <button type="submit">Soft Delete Company Only</button>
+    </form>
+
+{% else %}
+    <p>This company has no associated visits.</p>
+
+    <form method="post" action="/company/{{ company.id }}/delete">
+        <input type="hidden" name="action" value="soft_delete">
+        <button type="submit" style="color:red;">Delete Company</button>
+    </form>
+{% endif %}
+
+<br>
+<a href="/company/{{ company.id }}">Cancel</a>
+
+{% endblock %}

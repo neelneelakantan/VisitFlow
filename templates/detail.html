@@ -3,6 +3,9 @@
 
 <h2>{{ company.name }}</h2>
 
+<a href="/company/{{ company.id }}/delete" style="color:red;">Delete Company</a>
+<a href="/companies/{{ company.id }}/edit" style="margin-right:10px;">Edit Company</a>
+
 {% if last_visit %}
     <p>
         <strong>Last Visit:</strong> {{ last_visit.timestamp }}<br>
@@ -49,7 +52,9 @@
     <p><em>No visits yet.</em></p>
 {% endif %}
 
-<p><a href="{{ company.url }}" target="_blank">Visit Website</a></p>
+{% for u in company.urls %}
+    <a href="{{ u }}" target="_blank">{{ u | truncate(80, True, '...') }}</a><br>
+{% endfor %}
 
 <style>
     .meta-grid {

@@ -20,9 +20,9 @@
             <span class="overdue">• Overdue</span>
         {% endif %}
     </div>
-        <div>
-            <a href="{{ item.company.url }}" target="_blank">{{ item.company.url }}</a>
-        </div>
+        {% for u in item.company.urls %}
+        <a href="{{ u }}" target="_blank">{{ u | truncate(80, True, '...') }}</a><br>
+        {% endfor %}
 
     <div class="value-{{ item.company.value }}">
         Value: {{ item.company.value }}

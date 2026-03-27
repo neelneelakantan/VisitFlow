@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>{{ company.name }} (Deleted)</h2>
+<p>This company has been deleted. Visits linked to it remain in your history.</p>
+
+<a href="/companies/deleted">View Deleted Companies</a><br>
+<a href="/companies">Back to Companies</a>
+
+{% endblock %}
+

@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Edit Company</h2>
+
+<form method="post">
+    <label>Name:</label>
+    <input type="text" name="name" value="{{ company.name }}" required><br>
+
+    <label>URLs (one per line):</label><br>
+    <textarea name="urls" rows="4">{{ company.urls | join('\n') }}</textarea>
+
+    <label>Value:</label>
+    <select name="value">
+        <option value="high" {% if company.value == "high" %}selected{% endif %}>High</option>
+        <option value="medium" {% if company.value == "medium" %}selected{% endif %}>Medium</option>
+        <option value="low" {% if company.value == "low" %}selected{% endif %}>Low</option>
+    </select><br>
+
+    <label>Cadence (days):</label>
+    <input type="number" name="cadence_days" value="{{ company.cadence_days }}"><br>
+
+    <label>Frequency:</label>
+    <input type="text" name="frequency" value="{{ company.frequency }}"><br>
+
+    <label>Specific Date:</label>
+    <input type="text" name="specific_date" value="{{ company.specific_date }}"><br>
+
+    <label>Notes:</label><br>
+    <textarea name="notes" rows="4">{{ company.notes }}</textarea><br>
+
+    <button type="submit">Save</button>
+</form>
+
+<a href="/companies/{{ company.id }}">Cancel</a>
+
+{% endblock %}

@@ -7,6 +7,7 @@ from pydantic import BaseModel
 
 from models import Company, CompanyCreate, CompanyUpdate, ApplyNote, VisitRecord
 from pipeline import build_visit_record
+import store
 from store import load_freenotes, add_freenote, add_visit, instance, save_companies
 from utils import compute_next_check
 
@@ -30,7 +31,7 @@ def create_company(payload: CompanyCreate):
     company = Company(
         id=0,  # will be set by store.add_company
         name=payload.name,
-        url=payload.url,
+        urls=payload.urls,
         value=payload.value or "medium",
         cadence_days=payload.cadence_days or 7,
         frequency =  payload.frequency or "weekly",
@@ -146,13 +147,13 @@ def list_visits():
             "sentiment": v.insights.get("sentiment_energy", {}).get("sentiment"),
             "energy": v.insights.get("sentiment_energy", {}).get("energy")
         }
-        for v in instance.VISIT_STORE
+        for v in store.VISIT_STORE
     ]
 
 
 @router.get("/visit/{visit_id}")
 def get_visit(visit_id: str):
-    for v in instance.VISIT_STORE:
+    for v in store.VISIT_STORE:
         if v.visit_id == visit_id:
             return v
     return {"error": "Visit not found"}

@@ -3,7 +3,9 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
-from store import load_freenotes, add_freenote, add_visit, instance, VISIT_STORE, save_companies, get_visit
+import store
+from store import load_freenotes, add_freenote, add_visit, instance, save_companies, get_visit, save_visits
+from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
@@ -59,6 +61,7 @@ def dashboard_page(request: Request):
     )
 
 
+
 @router.get("/companies", response_class=HTMLResponse)
 def list_companies_page(
     request: Request,
@@ -75,7 +78,7 @@ def list_companies_page(
         companies = [
             c for c in companies
             if q_lower in c.name.lower()
-            or q_lower in (c.url or "").lower()
+            or any (q_lower in u.lower() for u in c.urls)
             or q_lower in (c.notes or "").lower()
             or q_lower in c.value.lower()
         ]
@@ -135,19 +138,56 @@ def new_company_form(request: Request):
     return templates.TemplateResponse("new_company.html", {"request": request})
 
 
+@router.get("/companies/deleted")
+def deleted_companies(request: Request):
+    companies = instance.list_deleted_companies()
+    return templates.TemplateResponse(
+        "company_deleted_list.html",
+        {"request": request, "companies": companies}
+    )
+
+@router.post("/reload")
+def reload_data():
+    # Reload companies
+    companies = load_companies()
+    instance.companies = {c.id: c for c in companies}
+
+    # Recompute next_id
+    if instance.companies:
+        instance.next_id = max(instance.companies.keys()) + 1
+    else:
+        instance.next_id = 1
+
+    # Reload visits
+    store.VISIT_STORE[:] = load_visits()
+
+    # Reload freenotes
+    # (no internal store, so nothing to update)
+
+    return RedirectResponse("/", status_code=303)
+
+
+@router.post("/companies/purge/")
+def purge_deleted():
+    instance.purge_deleted_companies()
+    return RedirectResponse("/companies/deleted", status_code=303)
+
+
 @router.post("/companies/new")
 def create_company_form(
     name: str = Form(...),
-    url: str = Form(...),
+    urls: str = Form(...),
     value: str = Form("medium"),
     cadence_days: int = Form(7),
     frequency: str = Form("weekly"),
     specific_date: str | None = Form(None),
 ):
+    urls_list = [u.strip() for u in urls.splitlines() if u.strip()]
+
     company = Company(
         id=0,
         name=name,
-        url=url,
+        urls=urls_list,
         value=value,
         cadence_days=cadence_days,
         frequency=frequency,
@@ -158,12 +198,57 @@ def create_company_form(
 
 
 
+@router.get("/companies/{company_id}/edit")
+def edit_company_form(request: Request, company_id: int):
+    company = instance.get_company(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    return templates.TemplateResponse(
+        "edit_company.html",
+        {"request": request, "company": company}
+    )
+
+@router.post("/companies/{company_id}/edit")
+def edit_company_submit(
+    company_id: int,
+    name: str = Form(...),
+    urls: str = Form(...),
+    value: str = Form(...),
+    cadence_days: int = Form(...),
+    frequency: str = Form(...),
+    specific_date: str | None = Form(None),
+    notes: str | None = Form(None),
+):
+    company = instance.get_company(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    urls_list = [u.strip() for u in urls.splitlines() if u.strip()]
+
+    company.name = name
+    company.urls = urls_list
+    company.value = value
+    company.cadence_days = cadence_days
+    company.frequency = frequency
+    company.specific_date = specific_date
+    company.notes = notes
+
+    save_companies(list(instance.companies.values()))
+    return RedirectResponse(f"/companies/{company_id}", status_code=303)
+
 @router.get("/companies/{company_id}")
 def company_detail(request: Request, company_id: int):
     company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
+    if company.status == "deleted":
+        return templates.TemplateResponse(
+            "company_deleted.html",
+            {"request": request, "company": company}
+        )
+    
     # Compute next check
     next_check = compute_next_check(company)
 
@@ -190,7 +275,7 @@ def company_detail(request: Request, company_id: int):
     # REAL VISIT LOADING LOGIC
     # -----------------------------
     visits = [
-        v for v in VISIT_STORE
+        v for v in store.VISIT_STORE
         if v.company_id == company_id
     ]
 
@@ -284,6 +369,41 @@ async def apply_now(company_id: int):
 
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
 
+@router.get("/company/{company_id}/delete")
+def delete_company_confirm(request: Request, company_id: int):
+    company = instance.get_company(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Find visits referencing this company
+    visits = [v for v in store.VISIT_STORE if v.company_id == company_id]
+
+    return templates.TemplateResponse(
+        "company_delete_confirm.html",
+        {
+            "request": request,
+            "company": company,
+            "visits": visits
+        }
+    )
+
+@router.post("/company/{company_id}/delete")
+def delete_company_action(
+    company_id: int,
+    action: str = Form(...),
+):
+    company = instance.get_company(company_id)
+    if not company:
+        raise HTTPException(status_code=404, detail="Company not found")
+
+    # Soft delete the company
+    company.status = "deleted"
+    save_companies(list(instance.companies.values()))
+
+    # Redirect to company list
+    return RedirectResponse("/companies", status_code=303)
+
+
 @router.get("/api-explorer", response_class=HTMLResponse)
 def api_explorer(request: Request):
     return templates.TemplateResponse("api.html", {"request": request})
@@ -299,7 +419,7 @@ def test_page(request: Request):
 
 @router.get("/timeline")
 def timeline(request: Request):
-    visits = VISIT_STORE
+    visits = store.VISIT_STORE
 
     enriched = []
     for v in visits:
@@ -412,5 +532,83 @@ def freenotes_new_page(request: Request):
         "freenotes_new.html",
         {"request": request}
     )
+
+@router.post("/freenotes/new")
+def freenotes_new_submit(
+    note: str = Form(...)
+):
+    add_freenote(note)
+    return RedirectResponse("/freenotes", status_code=303)
+
+@router.get("/freenotes/{note_id}")
+def freenote_detail(request: Request, note_id: int):
+    note = get_freenote(note_id)
+    return templates.TemplateResponse(
+        "freenote_detail.html",
+        {"request": request, "note": note}
+    )
+
  
+@router.get("/visit/{visit_id}/edit")
+def edit_visit_page(request: Request, visit_id: str):
+    visit = get_visit(visit_id)
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+
+    return templates.TemplateResponse(
+        "edit_visit.html",
+        {"request": request, "visit": visit}
+    )
+
+@router.post("/visit/{visit_id}/edit")
+def edit_visit_submit(
+    visit_id: str,
+    notes: str = Form(...)
+):
+    visit = get_visit(visit_id)
+    if not visit:
+        raise HTTPException(status_code=404, detail="Visit not found")
+
+    # Update raw notes
+    visit.raw_notes = notes
+
+    # Re-run pipeline for updated fields
+    updated = build_visit_record(notes)
+
+    visit.normalized_notes = updated.normalized_notes
+    visit.structured_summary = updated.structured_summary
+    visit.insights = updated.insights
+    visit.recommended_next_steps = updated.recommended_next_steps
+    visit.narrative = updated.narrative
+
+    save_visits(store.VISIT_STORE)
+    return RedirectResponse(f"/visit/{visit_id}", status_code=303)
+
+
+@router.post("/visit/{visit_id}/delete")
+def delete_visit(visit_id: str):
+    store.VISIT_STORE = [v for v in store.VISIT_STORE if v.visit_id != visit_id]
+    save_visits(store.VISIT_STORE)
+    return RedirectResponse("/timeline", status_code=303)
+
+@router.get("/freenotes/{note_id}/edit")
+def freenote_edit_form(request: Request, note_id: int):
+    note = get_freenote(note_id)
+    return templates.TemplateResponse(
+        "freenote_edit.html",
+        {"request": request, "note": note}
+    )
+
+
+@router.post("/freenotes/{note_id}/edit")
+def freenote_edit_submit(note_id: int, text: str = Form(...)):
+    update_freenote(note_id, text)
+    return RedirectResponse(f"/freenotes/{note_id}", status_code=303)
+
+
+@router.get("/freenotes/{note_id}/delete")
+def freenote_delete(request: Request, note_id: int):
+    delete_freenote(note_id)
+    return RedirectResponse("/freenotes", status_code=303)
+
 

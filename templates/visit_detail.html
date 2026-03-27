@@ -15,9 +15,15 @@
 
 <p><strong>Date:</strong> {{ visit.timestamp.astimezone().strftime("%b %d, %Y %I:%M %p") }}</p>
 
+<a href="/visit/{{ visit.visit_id }}/edit">Edit</a>
+
+<form method="post" action="/visit/{{ visit.visit_id }}/delete" style="display:inline;">
+    <button type="submit" style="color:red;">Delete</button>
+</form>
+
 {% if company %}
     <p><strong>Company:</strong>
-        <a href="/companies/{{ company.id }}">{{ company.name }}</a>
+            <a href="/companies/{{ company.id }}">{{ company.name }}</a>
     </p>
 {% else %}
     <p><strong>Company:</strong> No company</p>

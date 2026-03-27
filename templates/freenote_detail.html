@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>FreeNote</h2>
+
+<p><strong>Timestamp:</strong> {{ note.timestamp }}</p>
+
+<div style="margin-top: 10px; white-space: pre-wrap;">
+    {{ note.text }}
+</div>
+
+<div style="margin-top: 20px;">
+    <a href="/freenotes/{{ note.id }}/edit">Edit</a> |
+    <a href="/freenotes/{{ note.id }}/delete" style="color:red;">Delete</a> |
+    <a href="/freenotes">Back</a>
+</div>
+
+{% endblock %}

@@ -6,7 +6,8 @@ import uuid
 class Company(BaseModel):
     id: int
     name: str
-    url: str
+    urls: list[str] = []
+
     value: str = "medium"
 
     # Old field (still supported)
@@ -26,7 +27,8 @@ class Company(BaseModel):
 
 class CompanyCreate(BaseModel):
     name: str
-    url: str
+    urls: list[str] = []
+
     value: Optional[str] = None
     cadence_days: Optional[int] = None
     status: Optional[str] = None
@@ -38,7 +40,7 @@ class CompanyCreate(BaseModel):
 
 class CompanyUpdate(BaseModel):
     name: Optional[str] = None
-    url: Optional[str] = None
+    urls: list[str] = []
     value: Optional[str] = None
     cadence_days: Optional[int] = None
     status: Optional[str] = None

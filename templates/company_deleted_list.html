@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Deleted Companies</h2>
+
+<ul>
+{% for company in companies %}
+    <li>
+        <strong>{{ company.name }}</strong><br>
+        {% for u in company.urls %}
+            <a href="{{ u }}" target="_blank">{{ u | truncate(80, True, '...') }}</a><br>
+        {% endfor %}
+
+        Value: {{ company.value }}
+    </li>
+{% endfor %}
+</ul>
+
+<form method="post" action="/companies/purge/">
+    <button type="submit" style="color:red;">Purge Deleted Companies</button>
+</form>
+
+<a href="/companies">Back to Companies</a>
+
+{% endblock %}

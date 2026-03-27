@@ -3,13 +3,15 @@
 
 <h2>Free Notes</h2>
 
-<a href="/freenotes/new">Add Note</a>
+<a href="/freenotes/new">+ Add Note</a>
 <br><br>
 
 <ul>
 {% for note in notes %}
     <li>
         <strong>{{ note.timestamp | replace("T", " ") | replace("Z", "") }}</strong><br>
+        <a href="/freenotes/{{ note.id }}">{{ note.timestamp }}</a>
+
         {{ note.text }}
         <hr>
     </li>

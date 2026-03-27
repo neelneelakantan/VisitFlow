@@ -2,6 +2,7 @@ from models import Company, VisitRecord
 from datetime import datetime, timezone
 import json
 from pathlib import Path
+from typing import Optional
 
 
 # 1. Define file path FIRST
@@ -39,6 +40,7 @@ def load_companies():
     try:
         raw = json.loads(COMPANIES_FILE.read_text())
         companies = [Company.model_validate(c) for c in raw]
+
         return companies
     except Exception as e:
         print("Error loading companies:", e)
@@ -56,7 +58,7 @@ VISIT_STORE = load_visits()
 COMPANY_STORE = load_companies()
 
 # 4. add_visit helper
-def add_visit(record: VisitRecord, company_id: int):
+def add_visit(record: VisitRecord, company_id: Optional[int]):
     record.company_id = company_id
     VISIT_STORE.append(record)
     save_visits(VISIT_STORE)
@@ -72,16 +74,19 @@ def get_visit(visit_id: str):
 class Store:
     def __init__(self):
         # Load companies from disk
-        companies = load_companies()
+        self.companies = load_companies()
 
         # Convert list → dict keyed by company.id
-        self.companies = {c.id: c for c in companies}
+        self.companies = {c.id: c for c in self.companies}
 
-        # Compute next_id safely
-        if companies:
-            self.next_id = max(c.id for c in companies) + 1
+        if self.companies:
+            # Option A: from keys
+            self.next_id = max(self.companies.keys()) + 1
+            # or Option B: from values
+            # self.next_id = max(c.id for c in self.companies.values()) + 1
         else:
             self.next_id = 1
+        # Compute next_id safely
 
 
     def add_company(self, company: Company):
@@ -93,13 +98,23 @@ class Store:
         save_companies(list(self.companies.values()))
         return company
 
+    def purge_deleted_companies(self):
+        self.companies = {
+            cid: c for cid, c in self.companies.items()
+            if c.status != "deleted"
+        }
+        save_companies(list(self.companies.values()))
+
 
     def get_company(self, company_id: int):
         return self.companies.get(company_id)
     
 
     def list_companies(self):
-        return list(self.companies.values())
+        return [c for c in self.companies.values() if c.status != "deleted"]
+
+    def list_deleted_companies(self):
+        return [c for c in self.companies.values() if c.status == "deleted"]
 
 
     def mark_visited(self, company_id: int):
@@ -149,4 +164,29 @@ def add_freenote(text, template_type=None):
     notes.append(note)
     save_freenotes(notes)
     return note
+
+def get_freenote(note_id: int):
+    notes = load_freenotes()
+    for n in notes:
+        if n["id"] == note_id:
+            return n
+    return None
+
+
+def update_freenote(note_id: int, text: str):
+    notes = load_freenotes()
+    for n in notes:
+        if n["id"] == note_id:
+            n["text"] = text
+            save_freenotes(notes)
+            return n
+    return None
+
+
+def delete_freenote(note_id: int):
+    notes = load_freenotes()
+    notes = [n for n in notes if n["id"] != note_id]
+    save_freenotes(notes)
+
+
 
