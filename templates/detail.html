@@ -113,8 +113,7 @@
 </div>
 
 <!-- Visit Now button -->
-<form action="/new" method="get">
-    <input type="hidden" name="company_id" value="{{ company.id }}">
+<form method="post" action="/companies/{{ company.id }}/visit">
     <button type="submit">Visit Now</button>
 </form>
 

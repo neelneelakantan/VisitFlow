@@ -96,6 +96,7 @@ def apply_company(company_id: int, payload: ApplyNote):
 
     timestamp = datetime.now(timezone.utc).astimezone().strftime("%Y-%m-%d %H:%M:%S")
     entry = f"[{timestamp}] {payload.note}"
+    instance.mark_visited(company_id)
 
     company.notes = (company.notes + "\n" + entry).strip()
     company.updated_at = datetime.now(timezone.utc)
