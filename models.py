@@ -19,7 +19,7 @@ class Company(BaseModel):
 
     status: str = "active"
     reason: str = ""
-    notes: str = ""
+    notes: str | None = ""
     last_checked: Optional[datetime] = None
     last_applied: Optional[datetime] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))

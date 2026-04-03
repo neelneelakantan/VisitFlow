@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Daily 3 Summary</h2>
+
+<h3>Today’s Summary</h3>
+{% if today_entry %}
+    <p><strong>Block 1:</strong> {{ today_entry.b1_result }}</p>
+    <p><strong>Block 2:</strong> {{ today_entry.b2_result }}</p>
+    <p><strong>Block 3:</strong> {{ today_entry.b3_result }}</p>
+    <p><strong>Completion:</strong> {{ computed_completion }} /3</p>
+    <p><strong>Energy:</strong> {{ today_entry.energy }}</p>
+    <p><strong>Notes:</strong> {{ today_entry.notes }}</p>
+{% else %}
+    <p>No Daily 3 entry for today yet.</p>
+{% endif %}
+
+<hr>
+
+<p><em>Week of {{ metrics.week_start }} → {{ metrics.week_end }}</em></p>
+
+<h3>This Week</h3>
+
+<p><strong>Blocks completed:</strong> {{ metrics.blocks_done }}</p>
+
+<p><strong>Energy trend:</strong>
+    {% for e in metrics.energy_values %}
+        {{ e }}{% if not loop.last %} → {% endif %}
+    {% endfor %}
+</p>
+
+<p><strong>Completion trend:</strong>
+    {% for c in metrics.completion_values %}
+        {{ c }}{% if not loop.last %} → {% endif %}
+    {% endfor %}
+</p>
+
+<hr>
+
+{% endblock %}
+

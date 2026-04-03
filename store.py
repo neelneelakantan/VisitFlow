@@ -1,5 +1,5 @@
 from models import Company, VisitRecord
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 import json
 from pathlib import Path
 from typing import Optional
@@ -189,4 +189,92 @@ def delete_freenote(note_id: int):
     save_freenotes(notes)
 
 
+DAILY3_FILE = BASE_DIR / "data" / "daily3.json"
+DAILY3_FILE.parent.mkdir(exist_ok=True)
+
+
+def load_daily3():
+    if not DAILY3_FILE.exists():
+        return {}
+
+    text = DAILY3_FILE.read_text().strip()
+    if not text:
+        return {}  # empty file → treat as empty dict
+
+    try:
+        return json.loads(text)
+    except Exception:
+        return {}  # corrupted file → reset to empty
+
+
+def save_daily3(data):
+    DAILY3_FILE.write_text(json.dumps(data, indent=2))
+
+def load_daily3_for_today():
+    data = load_daily3()
+    today = datetime.now(timezone.utc).date().isoformat()
+    return data.get(today)
+
+def save_daily3_for_today(entry):
+    data = load_daily3()
+    today = datetime.now(timezone.utc).date().isoformat()
+    data[today] = entry
+    save_daily3(data)
+
+
+
+def compute_weekly_metrics():
+    today = datetime.now(timezone.utc).date()
+    week_start = today - timedelta(days=6)
+
+    data = load_daily3()
+
+    blocks_done = 0
+    energy_values = []
+    completion_values = []
+
+    for date_str, entry in data.items():
+        try:
+            d = datetime.fromisoformat(date_str).date()
+        except:
+            continue
+
+        if d < week_start or d > today:
+            continue
+
+        # Count blocks done
+        for key in ["b1_result", "b2_result", "b3_result"]:
+            if entry.get(key, "").strip().lower() == "done":
+                blocks_done += 1
+
+        # Energy trend
+        if "energy" in entry:
+            energy_values.append(entry["energy"])
+
+        # Completion trend
+        if "completion" in entry:
+            try:
+                completion_values.append(int(entry["completion"]))
+            except:
+                pass
+
+    return {
+        "blocks_done": blocks_done,
+        "energy_values": energy_values,
+        "completion_values": completion_values,
+        "week_start": week_start.isoformat(),
+        "week_end": today.isoformat(),
+    }
+
+
+
+def load_daily3_for_date(date_str: str):
+    data = load_daily3()
+    return data.get(date_str)
+
+
+def save_daily3_for_date(date_str: str, entry: dict):
+    data = load_daily3()
+    data[date_str] = entry
+    save_daily3(data)
 

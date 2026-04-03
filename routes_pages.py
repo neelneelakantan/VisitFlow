@@ -11,6 +11,7 @@ from pipeline import build_visit_record
 from utils import compute_next_check
 from typing import Optional
 
+
 router = APIRouter()
 
 @router.get("/")
@@ -45,6 +46,17 @@ def dashboard_page(request: Request):
         elif today < next_date <= today + timedelta(days=7):
             upcoming.append(c)
 
+    weekly = store.compute_weekly_metrics()
+    today_entry = store.load_daily3_for_date(today.isoformat())
+
+    # --- Compute today's completion dynamically ---
+    computed_completion = 0
+    if today_entry:
+        for key in ["b1_result", "b2_result", "b3_result"]:
+            val = today_entry.get(key, "")
+            if isinstance(val, str) and val.strip().lower() == "done":
+                computed_completion += 1
+
     # TODO sort the upcoming to be on shortest
 
     return templates.TemplateResponse(
@@ -57,6 +69,9 @@ def dashboard_page(request: Request):
             "upcoming": upcoming,
             "no_duedate" : no_duedate,
             "never_checked": never_checked,
+            "weekly": weekly,
+            "today_entry": today_entry,
+            "computed_completion": computed_completion,
         }
     )
 
@@ -192,6 +207,7 @@ def create_company_form(
         cadence_days=cadence_days,
         frequency=frequency,
         specific_date=specific_date,
+        notes="",   # ensure no null ever written
     )
     instance.add_company(company)
     return RedirectResponse("/companies", status_code=303)
@@ -232,7 +248,7 @@ def edit_company_submit(
     company.cadence_days = cadence_days
     company.frequency = frequency
     company.specific_date = specific_date
-    company.notes = notes
+    company.notes = notes or ""
 
     save_companies(list(instance.companies.values()))
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
@@ -610,5 +626,102 @@ def freenote_edit_submit(note_id: int, text: str = Form(...)):
 def freenote_delete(request: Request, note_id: int):
     delete_freenote(note_id)
     return RedirectResponse("/freenotes", status_code=303)
+
+
+@router.get("/daily3")
+def daily3_page(request: Request, date: str | None = None):
+    if date is None:
+        date = datetime.now(timezone.utc).date().isoformat()
+
+
+    current = datetime.fromisoformat(date)
+    yesterday = (current - timedelta(days=1)).date().isoformat()
+    tomorrow = (current + timedelta(days=1)).date().isoformat()
+
+    entry = store.load_daily3_for_date(date)
+
+    # compute completion dynamically
+    computed_completion = 0
+    if entry:
+        for key in ["b1_result", "b2_result", "b3_result"]:
+            val = entry.get(key, "")
+            if isinstance(val, str) and val.strip().lower() == "done":
+                computed_completion += 1
+
+    return templates.TemplateResponse(
+        "daily3.html",
+        {
+            "request": request,
+            "entry": entry,
+            "date": date,
+            "yesterday": yesterday,
+            "tomorrow": tomorrow,
+            "computed_completion": computed_completion,
+        }
+    )
+
+
+@router.post("/daily3")
+def daily3_submit(
+    request: Request,
+    date: str = Form(...),
+    b1_plan: str = Form(""),
+    b1_result: str = Form("none"),
+    b1_outcome: str = Form(""),
+    b2_plan: str = Form(""),
+    b2_result: str = Form("none"),
+    b2_outcome: str = Form(""),
+    b3_plan: str = Form(""),
+    b3_result: str = Form("none"),
+    b3_outcome: str = Form(""),
+    completion: str = Form("0"),
+    energy: str = Form("steady"),
+    notes: str = Form("")
+):
+    entry = {
+        "b1_plan": b1_plan,
+        "b1_result": b1_result,
+        "b1_outcome": b1_outcome,
+        "b2_plan": b2_plan,
+        "b2_result": b2_result,
+        "b2_outcome": b2_outcome,
+        "b3_plan": b3_plan,
+        "b3_result": b3_result,
+        "b3_outcome": b3_outcome,
+        "completion": completion,
+        "energy": energy,
+        "notes": notes,
+    }
+
+    store.save_daily3_for_date(date, entry)
+
+    return RedirectResponse(f"/daily3?date={date}", status_code=303)
+
+
+
+@router.get("/daily3/summary")
+def daily3_dashboard(request: Request):
+    today_entry = store.load_daily3_for_today()
+    metrics = store.compute_weekly_metrics()
+
+    # --- Compute today's completion dynamically ---
+    computed_completion = 0
+    if today_entry:
+        for key in ["b1_result", "b2_result", "b3_result"]:
+            val = today_entry.get(key, "")
+            if isinstance(val, str) and val.strip().lower() == "done":
+                computed_completion += 1
+
+    return templates.TemplateResponse(
+        "daily3_dashboard.html",
+        {
+            "request": request,
+            "today_entry": today_entry,
+            "metrics": metrics,
+            "computed_completion": computed_completion,
+        }
+    )
+
+
 
 

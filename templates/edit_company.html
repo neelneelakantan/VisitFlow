@@ -8,8 +8,9 @@
     <input type="text" name="name" value="{{ company.name }}" required><br>
 
     <label>URLs (one per line):</label><br>
-    <textarea name="urls" rows="4">{{ company.urls | join('\n') }}</textarea>
+    <textarea name="urls" rows="8" style="width:100%">{{ company.urls | join('\n') }}</textarea>
 
+    <br>
     <label>Value:</label>
     <select name="value">
         <option value="high" {% if company.value == "high" %}selected{% endif %}>High</option>
