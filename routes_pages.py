@@ -6,10 +6,12 @@ from models import Company, VisitRecord
 import store
 from store import load_freenotes, add_freenote, add_visit, instance, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
+from store import load_harvester, save_harvester
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
 from typing import Optional
+import re
 
 
 router = APIRouter()
@@ -212,6 +214,112 @@ def create_company_form(
     instance.add_company(company)
     return RedirectResponse("/companies", status_code=303)
 
+
+@router.get("/companies/harvester")
+def harvester_list(request: Request, q: str | None = None):
+    items = load_harvester()
+
+    if q:
+        q_lower = q.lower()
+        items = [i for i in items if q_lower in i.lower()]
+
+    return templates.TemplateResponse(
+        "harvester_list.html",
+        {"request": request, "items": items, "q": q or ""}
+    )
+
+@router.post("/companies/harvester/delete")
+def harvester_delete(request: Request, name: str = Form(...)):
+    items = load_harvester()
+    items = [i for i in items if i.lower() != name.lower()]
+    save_harvester(items)
+    return RedirectResponse("/companies/harvester", status_code=303)
+
+@router.get("/companies/harvester/edit")
+def harvester_edit(request: Request, name: str):
+    return templates.TemplateResponse(
+        "harvester_edit.html",
+        {"request": request, "name": name}
+    )
+
+@router.post("/companies/harvester/edit")
+def harvester_edit_submit(request: Request, old: str = Form(...), new: str = Form(...)):
+    items = load_harvester()
+
+    # remove old
+    items = [i for i in items if i.lower() != old.lower()]
+
+    # add new (if not duplicate)
+    new_clean = new.strip()
+    if new_clean and new_clean.lower() not in {i.lower() for i in items}:
+        items.append(new_clean)
+
+    save_harvester(items)
+    return RedirectResponse("/companies/harvester", status_code=303)
+
+
+@router.get("/companies/harvest", response_class=HTMLResponse)
+def harvest_form(request: Request):
+    return templates.TemplateResponse(
+        "harvest.html",
+        {"request": request}
+    )
+
+@router.post("/companies/harvester/promote")
+def harvester_promote(request: Request, name: str = Form(...)):
+    # create a Company entry
+    company = Company(
+        id=0,
+        name=name,
+        urls=[],
+        value="medium",
+        notes="",
+    )
+    instance.add_company(company)
+
+    # remove from harvester
+    items = load_harvester()
+    items = [i for i in items if i.lower() != name.lower()]
+    save_harvester(items)
+
+    return RedirectResponse("/companies/harvester", status_code=303)
+
+
+
+@router.post("/companies/harvest")
+def harvest_submit(request: Request, raw: str = Form(...)):
+    tokens = re.split(r"[,\n\r•\-]+", raw)
+    cleaned = [t.strip() for t in tokens if t.strip()]
+
+    # case-insensitive dedupe within this batch
+    seen = set()
+    unique = []
+    for name in cleaned:
+        key = name.lower()
+        if key not in seen:
+            seen.add(key)
+            unique.append(name)
+
+    # load existing harvester items
+    items = load_harvester()
+    existing = {i.lower() for i in items}
+
+    added = []
+    for name in unique:
+        if name.lower() not in existing:
+            items.append(name)
+            added.append(name)
+
+    save_harvester(items)
+
+    return templates.TemplateResponse(
+        "harvest_result.html",
+        {
+            "request": request,
+            "added": added,
+            "skipped": len(unique) - len(added),
+        }
+    )
 
 
 @router.get("/companies/{company_id}/edit")
@@ -688,7 +796,6 @@ def daily3_submit(
         "b3_plan": b3_plan,
         "b3_result": b3_result,
         "b3_outcome": b3_outcome,
-        "completion": completion,
         "energy": energy,
         "notes": notes,
     }

@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Company Harvester</h2>
+
+<p>Paste any messy list of companies — comma-separated, line-separated, bullets, anything.</p>
+
+<form method="post" action="/companies/harvest">
+    <textarea name="raw" rows="12" style="width:100%"></textarea>
+    <br><br>
+    <button type="submit">Process</button>
+</form>
+
+{% endblock %}

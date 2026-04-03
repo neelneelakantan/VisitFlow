@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Harvester</h2>
+
+<p>These are companies you’ve touched, seen, or applied to — but haven’t promoted yet.</p>
+
+<form method="get" action="/companies/harvester">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search..." style="width: 60%;">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+{% if items %}
+<ul>
+    {% for name in items %}
+        <li>
+            {{ name }}
+            <form method="post" action="/companies/harvester/promote" style="display:inline;">
+                <input type="hidden" name="name" value="{{ name }}">
+                <button type="submit">Promote → Companies</button>
+            </form>
+            <form method="post" action="/companies/harvester/delete" style="display:inline;">
+                <input type="hidden" name="name" value="{{ name }}">
+                <button type="submit">Delete</button>
+            </form>
+            <a href="/companies/harvester/edit?name={{ name }}">Edit</a>
+
+        </li>
+    {% endfor %}
+</ul>
+{% else %}
+<p><em>No harvested companies yet.</em></p>
+{% endif %}
+
+
+<p><a href="/companies/harvest">Add more →</a></p>
+
+{% endblock %}

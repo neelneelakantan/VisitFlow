@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Harvester Results</h2>
+
+<p><strong>Added {{ added|length }} new companies.</strong></p>
+
+{% if added %}
+<ul>
+    {% for name in added %}
+        <li>{{ name }}</li>
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% if skipped > 0 %}
+<p><em>Skipped {{ skipped }} duplicates or existing entries.</em></p>
+{% endif %}
+
+<p><a href="/companies">Back to Companies →</a></p>
+<p><a href="/companies/harvester">Back to Harvester →</a></p>
+
+{% endblock %}

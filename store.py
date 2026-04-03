@@ -278,3 +278,22 @@ def save_daily3_for_date(date_str: str, entry: dict):
     data[date_str] = entry
     save_daily3(data)
 
+
+HARVESTER_FILE = BASE_DIR / "data" / "harvester.json"
+HARVESTER_FILE.parent.mkdir(exist_ok=True)
+
+def load_harvester():
+    if not HARVESTER_FILE.exists():
+        return []
+    text = HARVESTER_FILE.read_text().strip()
+    if not text:
+        return []
+    try:
+        return json.loads(text)
+    except:
+        return []
+
+
+def save_harvester(items: list[str]):
+    items = sorted(items, key=lambda x: x.lower())
+    HARVESTER_FILE.write_text(json.dumps(items, indent=2))

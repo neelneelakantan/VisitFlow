@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Edit Harvester Entry</h2>
+
+<form method="post" action="/companies/harvester/edit">
+    <input type="hidden" name="old" value="{{ name }}">
+    <p>
+        <input type="text" name="new" value="{{ name }}" style="width:100%;">
+    </p>
+    <button type="submit">Save</button>
+</form>
+
+{% endblock %}
