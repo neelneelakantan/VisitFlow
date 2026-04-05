@@ -1,5 +1,5 @@
 from models import Company, VisitRecord
-from datetime import datetime, timezone, timedelta
+from datetime import date, datetime, timezone, timedelta
 import json
 from pathlib import Path
 from typing import Optional
@@ -297,3 +297,36 @@ def load_harvester():
 def save_harvester(items: list[str]):
     items = sorted(items, key=lambda x: x.lower())
     HARVESTER_FILE.write_text(json.dumps(items, indent=2))
+
+
+INSIGHT_CACHE_PATH = Path("data/insight_cache.json")
+
+def load_insight_cache():
+    if INSIGHT_CACHE_PATH.exists():
+        return json.loads(INSIGHT_CACHE_PATH.read_text())
+    return {}
+
+def save_insight_cache(cache):
+    INSIGHT_CACHE_PATH.write_text(json.dumps(cache, indent=2))
+
+
+def load_daily3_between(start: date, end: date):
+    """
+    Load Daily3 entries between two dates (inclusive).
+    Returns a list of dicts.
+    """
+    results = []
+    current = start
+
+    while current <= end:
+        iso = current.isoformat()
+        entry = load_daily3_for_date(iso)
+        if entry:
+            results.append({
+                "date": iso,
+                "entry": entry
+            })
+        current += timedelta(days=1)
+
+    return results
+

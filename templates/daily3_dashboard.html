@@ -1,6 +1,23 @@
 {% extends "base.html" %}
 {% block content %}
 
+<style>
+.insight-card {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-radius: 8px;
+    border: 1px solid #ddd;
+    line-height: 1.5;
+}
+.insight-card p {
+    margin-bottom: 0.75rem;
+}
+.insight-card ul, .insight-card ol {
+    margin-left: 1.5rem;
+}
+</style>
+
 <h2>Daily 3 Summary</h2>
 
 <h3>Today’s Summary</h3>
@@ -36,6 +53,85 @@
 </p>
 
 <hr>
+<h3>Weekly Insight</h3>
+
+<button type="button" id="thisWeekBtn">This Week</button>
+<div id="insightLoading" style="display:none; margin-top:1rem;">
+    <em>Generating insight…</em>
+</div>
+
+<div id="insightResult" class="insight-card"></div>
+
+<form id="insightForm">
+  <label>Start:</label>
+  <input type="date" name="start" required>
+
+  <label>End:</label>
+  <input type="date" name="end" required>
+
+  <button type="submit">Generate Insight</button>
+  <button type="button" id="forceBtn">Force Recreate</button>
+
+</form>
+
+
+<script>
+document.getElementById("insightForm").onsubmit = async (e) => {
+  e.preventDefault();
+
+  const start = e.target.start.value;
+  const end = e.target.end.value;
+
+  const loading = document.getElementById("insightLoading");
+  const result = document.getElementById("insightResult");
+
+  // Reset UI
+  result.innerHTML = "";
+  loading.style.display = "block";
+
+  try {
+    const res = await fetch(`/api/llm/weekly-insight?start_date=${start}&end_date=${end}`);
+    const data = await res.json();
+
+    result.innerHTML = data.insight_html;
+  } finally {
+    loading.style.display = "none";
+  }
+};
+
+document.getElementById("thisWeekBtn").onclick = () => {
+  const start = "{{ metrics.week_start }}";
+  const end = "{{ metrics.week_end }}";
+
+  document.querySelector("input[name='start']").value = start;
+  document.querySelector("input[name='end']").value = end;
+
+  // Trigger the form submit programmatically
+  document.getElementById("insightForm").dispatchEvent(new Event("submit"));
+};
+
+document.getElementById("forceBtn").onclick = async () => {
+  const start = document.querySelector("input[name='start']").value;
+  const end = document.querySelector("input[name='end']").value;
+
+  if (!start || !end) return;
+
+  const loading = document.getElementById("insightLoading");
+  const result = document.getElementById("insightResult");
+
+  result.innerHTML = "";
+  loading.style.display = "block";
+
+  try {
+    const res = await fetch(`/api/llm/weekly-insight?start_date=${start}&end_date=${end}&force=true`);
+    const data = await res.json();
+    result.innerHTML = data.insight_html;
+  } finally {
+    loading.style.display = "none";
+  }
+};
+
+</script>
 
 {% endblock %}
 
