@@ -6,14 +6,14 @@
 <div style="border:1px solid #ccc; padding:10px; border-radius:6px; max-width:400px; margin-bottom:20px;">
     
     {% if today_entry %}
-        <p><strong>Today:</strong> {{ computed_completion }}/3 blocks • Energy: {{ today_entry.energy }}</p>
+        <p style="line-height: 0.5;"><strong>Today:</strong> {{ computed_completion }}/3 blocks • Energy: {{ today_entry.energy }}</p>
     {% else %}
-        <p><strong>Today:</strong> No Daily 3 entry yet.</p>
+        <p style="line-height: 0.5;"><strong>Today:</strong> No Daily 3 entry yet.</p>
     {% endif %}
 
-    <p><strong>This Week:</strong> {{ weekly.blocks_done }} blocks completed</p>
+    <p style="line-height: 0.5;"><strong>This Week:</strong> {{ weekly.blocks_done }} blocks completed</p>
 
-    <p><strong>Energy trend:</strong>
+    <p style="line-height: 0.5;"><strong>Energy trend:</strong>
         {% if weekly.energy_values %}
             {% for e in weekly.energy_values %}
                 {{ e }}{% if not loop.last %} → {% endif %}
@@ -23,7 +23,7 @@
         {% endif %}
     </p>
 
-    <p><strong>Completion trend:</strong>
+    <p style="line-height: 0.5;"><strong>Completion trend:</strong>
         {% if weekly.completion_values %}
             {% for c in weekly.completion_values %}
                 {{ c }}%{% if not loop.last %} → {% endif %}
@@ -33,7 +33,7 @@
         {% endif %}
     </p>
 
-    <p><a href="/daily3/summary">View Daily 3 Summary →</a></p>
+    <p style="line-height: 0.5;"><a href="/daily3/summary">View Daily 3 Summary →</a></p>
 </div>
 
 
