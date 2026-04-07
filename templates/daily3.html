@@ -18,7 +18,7 @@
 <hr>
 <p><a href="/daily3/dashboard">View Dashboard →</a></p>
 
-<h2>Daily 3 — {{ now() }}</h2>
+<h2>Daily 3 — {{ date | replace('-', '/') }}</h2>
 
 <form method="post" action="/daily3">
 

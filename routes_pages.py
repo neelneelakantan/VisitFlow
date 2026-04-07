@@ -19,7 +19,7 @@ router = APIRouter()
 @router.get("/")
 def dashboard_page(request: Request):
     companies = instance.list_companies()
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now().date()
 
     total = len(companies)
 
@@ -739,7 +739,7 @@ def freenote_delete(request: Request, note_id: int):
 @router.get("/daily3")
 def daily3_page(request: Request, date: str | None = None):
     if date is None:
-        date = datetime.now(timezone.utc).date().isoformat()
+        date = datetime.now().date().isoformat()
 
 
     current = datetime.fromisoformat(date)

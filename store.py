@@ -212,7 +212,7 @@ def save_daily3(data):
 
 def load_daily3_for_today():
     data = load_daily3()
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now().date().isoformat()
     return data.get(today)
 
 def save_daily3_for_today(entry):
@@ -224,7 +224,7 @@ def save_daily3_for_today(entry):
 
 
 def compute_weekly_metrics():
-    today = datetime.now(timezone.utc).date()
+    today = datetime.now().date()
     week_start = today - timedelta(days=6)
 
     data = load_daily3()
