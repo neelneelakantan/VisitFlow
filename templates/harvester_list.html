@@ -14,19 +14,29 @@
 
 {% if items %}
 <ul>
-    {% for name in items %}
+    {% for entry in items %}
         <li>
-            {{ name }}
+            <strong>{{ entry.name }}</strong>
+
+            {% if entry.source_url %}
+                — <a href="{{ entry.source_url }}" target="_blank">Source</a>
+            {% endif %}
+
+            {% if entry.careers_url %}
+                — <a href="{{ entry.careers_url }}" target="_blank">Careers</a>
+            {% endif %}
+
             <form method="post" action="/companies/harvester/promote" style="display:inline;">
-                <input type="hidden" name="name" value="{{ name }}">
+                <input type="hidden" name="name" value="{{ entry.name }}">
                 <button type="submit">Promote → Companies</button>
             </form>
+
             <form method="post" action="/companies/harvester/delete" style="display:inline;">
-                <input type="hidden" name="name" value="{{ name }}">
+                <input type="hidden" name="name" value="{{ entry.name }}">
                 <button type="submit">Delete</button>
             </form>
-            <a href="/companies/harvester/edit?name={{ name }}">Edit</a>
 
+            <a href="/companies/harvester/edit?name={{ entry.name }}">Edit</a>
         </li>
     {% endfor %}
 </ul>

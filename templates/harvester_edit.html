@@ -4,11 +4,29 @@
 <h2>Edit Harvester Entry</h2>
 
 <form method="post" action="/companies/harvester/edit">
-    <input type="hidden" name="old" value="{{ name }}">
-    <p>
-        <input type="text" name="new" value="{{ name }}" style="width:100%;">
+
+    <input type="hidden" name="old_name" value="{{ entry.name }}">
+
+    <p><strong>Company Name:</strong><br>
+        {{ entry.name }}
     </p>
+
+    <p><strong>Careers URL:</strong><br>
+        {% if entry.careers_url %}
+            <a href="{{ entry.careers_url }}" target="_blank">{{ entry.careers_url }}</a>
+        {% else %}
+            <em>(derived automatically)</em>
+        {% endif %}
+    </p>
+
+    <p>
+        <label><strong>Source URL:</strong></label><br>
+        <input type="text" name="source_url" value="{{ entry.source_url }}" style="width: 60%;">
+    </p>
+
     <button type="submit">Save</button>
 </form>
+
+<p><a href="/companies/harvester">Back →</a></p>
 
 {% endblock %}

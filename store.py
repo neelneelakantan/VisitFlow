@@ -1,6 +1,7 @@
 from models import Company, VisitRecord
 from datetime import date, datetime, timezone, timedelta
 import json
+import re
 from pathlib import Path
 from typing import Optional
 
@@ -329,4 +330,173 @@ def load_daily3_between(start: date, end: date):
         current += timedelta(days=1)
 
     return results
+
+
+import json
+import os
+from urllib.parse import urlparse
+
+DATA_DIR = os.path.join(os.path.dirname(__file__), "data")
+
+def load_json(filename, default):
+    path = os.path.join(DATA_DIR, filename)
+    if not os.path.exists(path):
+        return default
+    try:
+        with open(path, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except Exception:
+        return default
+
+def save_json(filename, data):
+    path = os.path.join(DATA_DIR, filename)
+    with open(path, "w", encoding="utf-8") as f:
+        json.dump(data, f, indent=2)
+
+# -----------------------------
+# Harvester helpers
+# -----------------------------
+
+def load_harvester():
+    data = load_json("harvester.json", default=[])
+    normalized = []
+
+    for item in data:
+        if isinstance(item, str):
+            normalized.append({
+                "name": item,
+                "source_url": None,
+                "careers_url": None,
+            })
+        else:
+            normalized.append(item)
+
+    return normalized
+
+def save_harvester(data):
+    save_json("harvester.json", data)
+
+
+
+def extract_company_from_url(url: str):
+    parsed = urlparse(url)
+    domain = parsed.netloc.replace("www.", "")
+    path_parts = [p for p in parsed.path.split("/") if p]
+
+    # -----------------------------
+    # Workable
+    # -----------------------------
+    if "workable.com" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]
+        company = slug.replace("-", " ").title()
+        careers_url = f"https://{domain}/{slug}/"
+        return company, careers_url
+
+    # -----------------------------
+    # Lever
+    # -----------------------------
+    if "lever.co" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]
+        company = slug.replace("-", " ").title()
+        careers_url = f"https://{domain}/{slug}"
+        return company, careers_url
+
+    # -----------------------------
+    # Greenhouse
+    # -----------------------------
+    if "greenhouse.io" in domain and len(path_parts) >= 2:
+        slug = path_parts[1]
+        company = slug.replace("-", " ").title()
+        careers_url = f"https://{domain}/{slug}"
+        return company, careers_url
+
+    # -----------------------------
+    # SmartRecruiters
+    # -----------------------------
+    if "smartrecruiters.com" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]
+        clean = re.sub(r"\d+$", "", slug)  # remove trailing digits
+        company = clean.replace("-", " ").title()
+        careers_url = f"https://{domain}/{slug}"
+        return company, careers_url
+
+    # -----------------------------
+    # BambooHR
+    # Example: https://acme.bamboohr.com/careers/123
+    # -----------------------------
+    if "bamboohr.com" in domain:
+        sub = domain.split(".")[0]
+        company = sub.replace("-", " ").title()
+        careers_url = f"https://{domain}/careers"
+        return company, careers_url
+
+    # -----------------------------
+    # Ashby
+    # Example: https://jobs.ashbyhq.com/acme/123
+    # -----------------------------
+    if "ashbyhq.com" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]
+        company = slug.replace("-", " ").title()
+        careers_url = f"https://{domain}/{slug}"
+        return company, careers_url
+
+    # -----------------------------
+    # JazzHR
+    # Example: https://acme.applytojob.com/apply/123
+    # -----------------------------
+    if "applytojob.com" in domain:
+        sub = domain.split(".")[0]
+        company = sub.replace("-", " ").title()
+        careers_url = f"https://{domain}"
+        return company, careers_url
+
+    # -----------------------------
+    # Workday (best effort)
+    # Example: https://acme.wd5.myworkdayjobs.com/en-US/AcmeCareers/job/...
+    # -----------------------------
+    if "myworkdayjobs.com" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]
+        clean = slug.replace("Careers", "").replace("-", " ")
+        company = clean.title()
+        careers_url = f"https://{domain}/{slug}"
+        return company, careers_url
+
+    # -----------------------------
+    # Taleo (best effort)
+    # Example: https://acme.taleo.net/careersection/...
+    # -----------------------------
+    if "taleo.net" in domain:
+        sub = domain.split(".")[0]
+        company = sub.replace("-", " ").title()
+        careers_url = f"https://{domain}"
+        return company, careers_url
+
+    # -----------------------------
+    # Indeed redirect URLs
+    # Example: https://www.indeed.com/viewjob?jk=...
+    # → cannot extract company reliably → fallback
+    # -----------------------------
+    if "indeed.com" in domain:
+        company = "Indeed"
+        careers_url = "https://indeed.com"
+        return company, careers_url
+
+    # -----------------------------
+    # LinkedIn job URLs
+    # Example: https://www.linkedin.com/jobs/view/123
+    # → cannot extract company reliably → fallback
+    # -----------------------------
+    if "linkedin.com" in domain:
+        company = "Linkedin"
+        careers_url = "https://linkedin.com/jobs"
+        return company, careers_url
+
+    # -----------------------------
+    # Fallback: domain-based extraction
+    # -----------------------------
+    company = domain.split(".")[0].replace("-", " ").title()
+    careers_url = f"https://{domain}/careers"
+    return company, careers_url
+
+
 

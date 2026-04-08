@@ -6,7 +6,7 @@ from models import Company, VisitRecord
 import store
 from store import load_freenotes, add_freenote, add_visit, instance, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
-from store import load_harvester, save_harvester
+from store import load_harvester, save_harvester, extract_company_from_url, load_json, save_json
 from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
@@ -216,46 +216,72 @@ def create_company_form(
 
 
 @router.get("/companies/harvester")
-def harvester_list(request: Request, q: str | None = None):
-    items = load_harvester()
+async def harvester_list(request: Request, q: str = ""):
+    data = load_harvester()
 
     if q:
-        q_lower = q.lower()
-        items = [i for i in items if q_lower in i.lower()]
+        items = [e for e in data if q.lower() in e["name"].lower()]
+    else:
+        items = data
 
     return templates.TemplateResponse(
         "harvester_list.html",
-        {"request": request, "items": items, "q": q or ""}
+        {"request": request, "items": items, "q": q},
     )
+
+
 
 @router.post("/companies/harvester/delete")
-def harvester_delete(request: Request, name: str = Form(...)):
-    items = load_harvester()
-    items = [i for i in items if i.lower() != name.lower()]
-    save_harvester(items)
+async def harvester_delete(request: Request):
+    form = await request.form()
+    name = form["name"]
+
+    data = load_harvester()
+    data = [e for e in data if e["name"] != name]
+    save_harvester(data)
+
     return RedirectResponse("/companies/harvester", status_code=303)
+
+
 
 @router.get("/companies/harvester/edit")
-def harvester_edit(request: Request, name: str):
+async def harvester_edit(request: Request, name: str):
+    data = load_harvester()
+    entry = next((e for e in data if e["name"] == name), None)
+    print("DEBUG: name param =", name)
+    print("DEBUG: harvester data =", load_harvester())
     return templates.TemplateResponse(
         "harvester_edit.html",
-        {"request": request, "name": name}
+        {"request": request, "entry": entry},
     )
 
+
 @router.post("/companies/harvester/edit")
-def harvester_edit_submit(request: Request, old: str = Form(...), new: str = Form(...)):
-    items = load_harvester()
+async def harvester_edit_post(request: Request):
+    form = await request.form()
 
-    # remove old
-    items = [i for i in items if i.lower() != old.lower()]
+    old_name = form["old_name"]
+    source_url = form.get("source_url", "").strip() or None
 
-    # add new (if not duplicate)
-    new_clean = new.strip()
-    if new_clean and new_clean.lower() not in {i.lower() for i in items}:
-        items.append(new_clean)
+    data = load_harvester()
 
-    save_harvester(items)
+    for entry in data:
+        if entry["name"] == old_name:
+
+            # If source URL changed, re-derive everything
+            if source_url and source_url != entry["source_url"]:
+                new_name, new_careers = extract_company_from_url(source_url)
+                entry["name"] = new_name
+                entry["source_url"] = source_url
+                entry["careers_url"] = new_careers
+            else:
+                # No change → keep existing
+                entry["source_url"] = source_url
+
+    save_harvester(data)
+
     return RedirectResponse("/companies/harvester", status_code=303)
+
 
 
 @router.get("/companies/harvest", response_class=HTMLResponse)
@@ -265,61 +291,78 @@ def harvest_form(request: Request):
         {"request": request}
     )
 
-@router.post("/companies/harvester/promote")
-def harvester_promote(request: Request, name: str = Form(...)):
-    # create a Company entry
-    company = Company(
-        id=0,
-        name=name,
-        urls=[],
-        value="medium",
-        notes="",
-    )
-    instance.add_company(company)
 
-    # remove from harvester
-    items = load_harvester()
-    items = [i for i in items if i.lower() != name.lower()]
-    save_harvester(items)
+@router.post("/companies/harvester/promote")
+async def harvester_promote(request: Request):
+    form = await request.form()
+    name = form["name"]
+
+    data = load_harvester()
+    remaining = []
+    promoted_entry = None
+
+    for entry in data:
+        if entry["name"] == name:
+            promoted_entry = entry
+        else:
+            remaining.append(entry)
+
+    save_harvester(remaining)
+
+    # Promote to Companies (string only)
+    companies = load_json("companies.json", default=[])
+    if name not in companies:
+        companies.append(name)
+        save_json("companies.json", companies)
 
     return RedirectResponse("/companies/harvester", status_code=303)
 
 
 
 @router.post("/companies/harvest")
-def harvest_submit(request: Request, raw: str = Form(...)):
-    tokens = re.split(r"[,\n\r•\-]+", raw)
-    cleaned = [t.strip() for t in tokens if t.strip()]
+async def companies_harvest(request: Request):
+    form = await request.form()
+    raw = form["raw"]
 
-    # case-insensitive dedupe within this batch
-    seen = set()
-    unique = []
-    for name in cleaned:
-        key = name.lower()
-        if key not in seen:
-            seen.add(key)
-            unique.append(name)
+    lines = [line.strip() for line in raw.splitlines() if line.strip()]
 
-    # load existing harvester items
-    items = load_harvester()
-    existing = {i.lower() for i in items}
+    data = load_harvester()
+    existing = {e["name"].lower() for e in data}
 
     added = []
-    for name in unique:
-        if name.lower() not in existing:
-            items.append(name)
-            added.append(name)
+    skipped = 0
 
-    save_harvester(items)
+    for line in lines:
+        if line.startswith("http://") or line.startswith("https://"):
+            name, careers_url = extract_company_from_url(line)
+            source_url = line
+        else:
+            name = line
+            careers_url = None
+            source_url = None
+
+        if name.lower() in existing:
+            skipped += 1
+            continue
+
+        entry = {
+            "name": name,
+            "source_url": source_url,
+            "careers_url": careers_url,
+        }
+
+        data.append(entry)
+        existing.add(name.lower())
+        added.append(entry)
+
+    save_harvester(data)
 
     return templates.TemplateResponse(
         "harvest_result.html",
-        {
-            "request": request,
-            "added": added,
-            "skipped": len(unique) - len(added),
-        }
+        {"request": request, "added": added, "skipped": skipped},
     )
+
+
 
 
 @router.get("/companies/{company_id}/edit")

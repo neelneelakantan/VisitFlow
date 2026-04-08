@@ -7,8 +7,18 @@
 
 {% if added %}
 <ul>
-    {% for name in added %}
-        <li>{{ name }}</li>
+    {% for entry in added %}
+        <li>
+            <strong>{{ entry.name }}</strong>
+
+            {% if entry.source_url %}
+                — <a href="{{ entry.source_url }}" target="_blank">Source</a>
+            {% endif %}
+
+            {% if entry.careers_url %}
+                — <a href="{{ entry.careers_url }}" target="_blank">Careers</a>
+            {% endif %}
+        </li>
     {% endfor %}
 </ul>
 {% endif %}
