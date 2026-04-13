@@ -404,10 +404,11 @@ def extract_company_from_url(url: str):
     # -----------------------------
     # Greenhouse
     # -----------------------------
-    if "greenhouse.io" in domain and len(path_parts) >= 2:
-        slug = path_parts[1]
+    if "greenhouse.io" in domain and len(path_parts) >= 1:
+        slug = path_parts[0]  # first segment is the company
         company = slug.replace("-", " ").title()
         careers_url = f"https://{domain}/{slug}"
+        #print(f"DEBUG: Greenhouse URL detected. domain='{domain}', path_parts={path_parts}")
         return company, careers_url
 
     # -----------------------------
