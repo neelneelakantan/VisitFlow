@@ -70,7 +70,7 @@ The system is small but structured like a real product.
 ### ✔ **Company Tracking**
 - Add companies you want to intentionally follow  
 - Assign value (high/medium/low)  
-- Set reminder frequency (daily/weekly/monthly/specific date/none)  
+- Set reminder frequency (daily/weekly/monthly/custom/specific date/none)  
 - Track last visited and last applied timestamps  
 
 ### ✔ **Visit Pipeline**

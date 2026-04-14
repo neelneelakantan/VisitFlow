@@ -41,7 +41,8 @@ def dashboard_page(request: Request):
         ### need to build logic for secific as well
         if c.last_checked is None:
             never_checked.append(c)
-        elif next_date < today:
+        # proceed and see when it is due    
+        if next_date < today:
             overdue.append(c)
         elif next_date == today:
             due_today.append(c)
@@ -400,6 +401,10 @@ def edit_company_submit(
     company.frequency = frequency
     company.specific_date = specific_date
     company.notes = notes or ""
+
+    #Add backend validation to ensure cadence_days is positive if frequency is weekly, monthly or custom
+    if company.cadence_days is None or company.cadence_days < 1:
+        company.cadence_days = 1
 
     save_companies(list(instance.companies.values()))
     return RedirectResponse(f"/companies/{company_id}", status_code=303)

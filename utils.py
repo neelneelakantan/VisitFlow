@@ -23,6 +23,9 @@ def compute_next_check(company):
     if freq == "monthly":
         return last + relativedelta(months=1)
 
+    if freq == "custom":
+        return last + timedelta(days=company.cadence_days)
+
     if freq == "specific_date":
         if company.specific_date:
             return datetime.fromisoformat(company.specific_date)

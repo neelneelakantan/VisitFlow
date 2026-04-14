@@ -19,10 +19,15 @@
     </select><br>
 
     <label>Cadence (days):</label>
-    <input type="number" name="cadence_days" value="{{ company.cadence_days }}"><br>
+    <input type="number" min="1" name="cadence_days" value="{{ company.cadence_days }}"><br>
 
     <label>Frequency:</label>
-    <input type="text" name="frequency" value="{{ company.frequency }}"><br>
+    <select name="frequency">
+        <option value="daily" {% if company.frequency == "daily" %}selected{% endif %}>Daily</option>
+        <option value="weekly" {% if company.frequency == "weekly" %}selected{% endif %}>Weekly</option>
+        <option value="monthly" {% if company.frequency == "monthly" %}selected{% endif %}>Monthly</option>
+        <option value="custom" {% if company.frequency == "custom" %}selected{% endif %}>Custom</option>
+    </select><br>
 
     <label>Specific Date:</label>
     <input type="text" name="specific_date" value="{{ company.specific_date }}"><br>

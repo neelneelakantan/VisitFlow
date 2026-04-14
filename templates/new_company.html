@@ -17,7 +17,7 @@
         </select>
     </p>
 
-    <p>Cadence (days): <input type="number" name="cadence_days" value="7"></p>
+    <p>Cadence (days): <input type="number" min="1" name="cadence_days" value="7"></p>
 
     <!-- NEW: Frequency -->
     <p>Frequency:
@@ -26,6 +26,7 @@
             <option value="daily">Daily</option>
             <option value="weekly" selected>Weekly</option>
             <option value="monthly">Monthly</option>
+            <option value="custom">Custom</option>
             <option value="specific_date">Specific Date</option>
         </select>
     </p>
