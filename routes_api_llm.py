@@ -46,6 +46,7 @@ Return ONLY the following, in 2–3 short bullet points each:
 - 2 patterns you notice (max 20 words each)
 - 1 thing to continue (max 20 words)
 - 1 thing to adjust next week (max 20 words)
+= if notes are present, also return 1 insight from the notes (max 20 words)
 
 NO reflection paragraphs.
 NO motivational tone.

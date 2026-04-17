@@ -853,7 +853,6 @@ def daily3_submit(
     return RedirectResponse(f"/daily3?date={date}", status_code=303)
 
 
-
 @router.get("/daily3/summary")
 def daily3_dashboard(request: Request):
     today_entry = store.load_daily3_for_today()
@@ -878,5 +877,21 @@ def daily3_dashboard(request: Request):
     )
 
 
+@router.post("/daily3/autosave")
+async def daily3_autosave(request: Request):
+    data = await request.json()
+    date = data["date"]
+    field = data["field"]
+    value = data["value"]
 
+    # Load existing entry or create a blank one
+    entry = store.load_daily3_for_date(date) or {}
+
+    # Update the single field
+    entry[field] = value
+
+    # Persist using your existing helper
+    store.save_daily3_for_date(date, entry)
+
+    return {"status": "ok"}
 

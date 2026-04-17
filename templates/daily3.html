@@ -26,48 +26,48 @@
 
     <h3>Block 1 (2 hours)</h3>
     <p>Plan:<br>
-        <textarea name="b1_plan" rows="2" style="width:100%">{{ entry.b1_plan if entry else '' }}</textarea>
+        <textarea name="b1_plan" class="daily3-input" rows="2" style="width:100%">{{ entry.b1_plan if entry else '' }}</textarea>
 
     </p>
     <p>Result:
-        <select name="b1_result">
+        <select name="b1_result"  class="daily3-input">
             <option value="none"   {% if entry and entry.b1_result == "none" %}selected{% endif %}>--</option>
             <option value="done"   {% if entry and entry.b1_result == "done" %}selected{% endif %}>Done</option>
             <option value="not_done" {% if entry and entry.b1_result == "not_done" %}selected{% endif %}>Not Done</option>
         </select>
     </p>
     <p>Outcome:<br>
-        <textarea name="b1_outcome" rows="2" style="width:100%">{{ entry.b1_outcome if entry else '' }}</textarea>
+        <textarea name="b1_outcome" class="daily3-input" rows="2" style="width:100%">{{ entry.b1_outcome if entry else '' }}</textarea>
     </p>
 
     <h3>Block 2 (2 hours)</h3>
     <p>Plan:<br>
-        <textarea name="b2_plan" rows="2" style="width:100%">{{ entry.b2_plan if entry else '' }}</textarea>
+        <textarea name="b2_plan" class="daily3-input" rows="2" style="width:100%">{{ entry.b2_plan if entry else '' }}</textarea>
     </p>
     <p>Result:
-        <select name="b2_result">
+        <select name="b2_result" class="daily3-input">
             <option value="none"   {% if entry and entry.b2_result == "none" %}selected{% endif %}>--</option>
             <option value="done"   {% if entry and entry.b2_result == "done" %}selected{% endif %}>Done</option>
             <option value="not_done" {% if entry and entry.b2_result == "not_done" %}selected{% endif %}>Not Done</option>
         </select>
     </p>
     <p>Outcome:<br>
-        <textarea name="b2_outcome" rows="2" style="width:100%">{{ entry.b2_outcome if entry else '' }}</textarea>
+        <textarea name="b2_outcome" class="daily3-input" rows="2" style="width:100%">{{ entry.b2_outcome if entry else '' }}</textarea>
     </p>
 
     <h3>Block 3 (2 hours)</h3>
     <p>Plan:<br>
-        <textarea name="b3_plan" rows="2" style="width:100%">{{ entry.b3_plan if entry else '' }}</textarea>
+        <textarea name="b3_plan" class="daily3-input" rows="2" style="width:100%">{{ entry.b3_plan if entry else '' }}</textarea>
     </p>
     <p>Result:
-        <select name="b3_result">
+        <select name="b3_result" class="daily3-input">
             <option value="none"   {% if entry and entry.b3_result == "none" %}selected{% endif %}>--</option>
             <option value="done"   {% if entry and entry.b3_result == "done" %}selected{% endif %}>Done</option>
             <option value="not_done" {% if entry and entry.b3_result == "not_done" %}selected{% endif %}>Not Done</option>
         </select>
     </p>
     <p>Outcome:<br>
-        <textarea name="b3_outcome" rows="2" style="width:100%">{{ entry.b3_outcome if entry else '' }}</textarea>
+        <textarea name="b3_outcome" class="daily3-input" rows="2" style="width:100%">{{ entry.b3_outcome if entry else '' }}</textarea>
     </p>
 
     <h3>End‑of‑Day Summary</h3>
@@ -76,7 +76,7 @@
     </p>
 
     <p>Energy:
-        <select name="energy">
+        <select name="energy" class="daily3-input">
             <option value="steady" {% if entry and entry.energy == "steady" %}selected{% endif %}>steady</option>
             <option value="low"    {% if entry and entry.energy == "low" %}selected{% endif %}>low</option>
             <option value="good"   {% if entry and entry.energy == "good" %}selected{% endif %}>good</option>
@@ -84,10 +84,26 @@
     </p>
 
     <p>Notes:<br>
-        <textarea name="notes" rows="3" style="width:100%">{{ entry.notes if entry else '' }}</textarea>
+        <textarea name="notes" class="daily3-input" rows="3" style="width:100%">{{ entry.notes if entry else '' }}</textarea>
     </p>
 
     <button type="submit">Save</button>
 </form>
+
+<script>
+document.querySelectorAll(".daily3-input").forEach(el => {
+    el.addEventListener("blur", async (e) => {
+        const field = e.target.name;
+        const value = e.target.value;
+        const date = "{{ date }}";
+
+        await fetch("/daily3/autosave", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ date, field, value })
+        });
+    });
+});
+</script>
 
 {% endblock %}
