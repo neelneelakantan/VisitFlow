@@ -17,7 +17,9 @@
         </select>
     </p>
 
-    <p>Cadence (days): <input type="number" min="1" name="cadence_days" value="7"></p>
+    <p id="cadence-container">
+        Cadence (days): <input type="number" min="1" name="cadence_days" value="7">
+    </p>
 
     <!-- NEW: Frequency -->
     <p>Frequency:
@@ -40,11 +42,20 @@
     <button type="submit">Create</button>
 </form>
 
+
 <script>
-document.getElementById("frequency-select").addEventListener("change", function() {
-    const container = document.getElementById("specific-date-container");
-    container.style.display = this.value === "specific_date" ? "block" : "none";
-});
+function updateVisibility() {
+    const freq = document.getElementById("frequency-select").value;
+
+    document.getElementById("specific-date-container").style.display =
+        freq === "specific_date" ? "block" : "none";
+
+    document.getElementById("cadence-container").style.display =
+        freq === "custom" ? "block" : "none";
+}
+
+updateVisibility();
+document.getElementById("frequency-select").addEventListener("change", updateVisibility);
 </script>
 
 {% endblock %}

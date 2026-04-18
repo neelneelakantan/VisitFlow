@@ -18,19 +18,26 @@
         <option value="low" {% if company.value == "low" %}selected{% endif %}>Low</option>
     </select><br>
 
-    <label>Cadence (days):</label>
-    <input type="number" min="1" name="cadence_days" value="{{ company.cadence_days }}"><br>
+    <p id="cadence-container">
+        Cadence (days):
+        <input type="number" min="1" name="cadence_days" value="{{ company.cadence_days }}">
+    </p>
 
-    <label>Frequency:</label>
-    <select name="frequency">
-        <option value="daily" {% if company.frequency == "daily" %}selected{% endif %}>Daily</option>
-        <option value="weekly" {% if company.frequency == "weekly" %}selected{% endif %}>Weekly</option>
-        <option value="monthly" {% if company.frequency == "monthly" %}selected{% endif %}>Monthly</option>
-        <option value="custom" {% if company.frequency == "custom" %}selected{% endif %}>Custom</option>
-    </select><br>
+    {% set freq = company.frequency | lower %}
+    <p>Frequency:
+    <select name="frequency" id="frequency-select">
+        <option value="daily"        {% if freq == "daily" %}selected{% endif %}>Daily</option>
+        <option value="weekly"       {% if freq == "weekly" %}selected{% endif %}>Weekly</option>
+        <option value="monthly"      {% if freq == "monthly" %}selected{% endif %}>Monthly</option>
+        <option value="custom"       {% if freq == "custom" %}selected{% endif %}>Custom</option>
+        <option value="specific_date" {% if freq == "specific_date" %}selected{% endif %}>Specific Date</option>
+    </select>
+    </p>
 
-    <label>Specific Date:</label>
-    <input type="text" name="specific_date" value="{{ company.specific_date }}"><br>
+    <p id="specific-date-container">
+        Specific Date:
+        <input type="date" name="specific_date" value="{{ company.specific_date or '' }}">
+    </p>
 
     <label>Notes:</label><br>
     <textarea name="notes" rows="4">{{ company.notes }}</textarea><br>
@@ -39,5 +46,20 @@
 </form>
 
 <a href="/companies/{{ company.id }}">Cancel</a>
+
+<script>
+function updateVisibility() {
+    const freq = document.getElementById("frequency-select").value;
+
+    document.getElementById("specific-date-container").style.display =
+        freq === "specific_date" ? "block" : "none";
+
+    document.getElementById("cadence-container").style.display =
+        freq === "custom" ? "block" : "none";
+}
+
+updateVisibility();
+document.getElementById("frequency-select").addEventListener("change", updateVisibility);
+</script>
 
 {% endblock %}
