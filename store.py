@@ -377,6 +377,22 @@ def save_harvester(data):
     save_json("harvester.json", data)
 
 
+def normalize_company_name(slug: str) -> str:
+    """
+    Normalize a Workday-style slug into a clean company name.
+    Examples:
+      Accurate_Careers → Accurate
+      acme-careers → Acme
+      AcmeCareers → Acme
+    """
+    # Remove trailing Careers (with optional _ or -)
+    slug = re.sub(r"[_-]?Careers$", "", slug, flags=re.IGNORECASE)
+
+    # Replace separators for readability
+    slug = slug.replace("_", " ").replace("-", " ")
+
+    return slug.title().strip()
+
 
 def extract_company_from_url(url: str):
     parsed = urlparse(url)
@@ -456,9 +472,12 @@ def extract_company_from_url(url: str):
     # Example: https://acme.wd5.myworkdayjobs.com/en-US/AcmeCareers/job/...
     # -----------------------------
     if "myworkdayjobs.com" in domain and len(path_parts) >= 1:
+        
         slug = path_parts[0]
-        clean = slug.replace("Careers", "").replace("-", " ")
-        company = clean.title()
+        if slug.lower() == "en-us" and len(path_parts) >1:
+            slug = path_parts[1]
+
+        clean = normalize_company_name(slug)
         careers_url = f"https://{domain}/{slug}"
         return company, careers_url
 
