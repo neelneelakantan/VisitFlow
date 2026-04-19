@@ -29,6 +29,8 @@ def dashboard_page(request: Request):
     never_checked = []
     no_duedate = []
 
+    value_order = {"high": 0, "medium": 1, "low": 2}
+
     for c in companies:
         next_check = compute_next_check(c)
 
@@ -60,7 +62,20 @@ def dashboard_page(request: Request):
             if isinstance(val, str) and val.strip().lower() == "done":
                 computed_completion += 1
 
-    # TODO sort the upcoming to be on shortest
+    # TODO expand sort to other items later.
+
+    upcoming.sort(
+        key=lambda c: (
+            value_order.get(c.value, 3),
+            compute_next_check(c)
+        )
+    )
+
+    grouped_upcoming = {"high": [], "medium": [], "low": [], "unknown": []}
+    for c in upcoming:
+        tier = c.value.lower() if c.value else "unknown"
+        next_date = compute_next_check(c).date()
+        grouped_upcoming[tier].append((c, next_date))
 
     return templates.TemplateResponse(
         "dashboard.html",
@@ -69,7 +84,7 @@ def dashboard_page(request: Request):
             "total": total,
             "overdue": overdue,
             "due_today": due_today,
-            "upcoming": upcoming,
+            "upcoming_grouped": grouped_upcoming,
             "no_duedate" : no_duedate,
             "never_checked": never_checked,
             "weekly": weekly,
@@ -77,7 +92,6 @@ def dashboard_page(request: Request):
             "computed_completion": computed_completion,
         }
     )
-
 
 
 @router.get("/companies", response_class=HTMLResponse)

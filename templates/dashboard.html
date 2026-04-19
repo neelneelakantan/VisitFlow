@@ -62,13 +62,20 @@
 </ul>
 
 <h3>Upcoming (next 7 days)</h3>
-<ul>
-{% for c in upcoming %}
-    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
-{% else %}
-    <li>None</li>
+
+{% for tier, items in upcoming_grouped.items() %}
+    {% if items %}
+        <h4>{{ tier|capitalize }} Value</h4>
+        <ul>    
+            {% for c, next_date in items %}
+                <li>
+                    <a href="/companies/{{ c.id }}">{{ c.name }}</a>
+                    — {{ next_date }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endfor %}
-</ul>
 
 <h3>Never Checked</h3>
 <ul>
