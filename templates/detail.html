@@ -112,8 +112,10 @@
 
 </div>
 
-<!-- Visit Now button -->
 <form method="post" action="/companies/{{ company.id }}/visit">
+    <label><strong>Add Notes (optional):</strong></label><br>
+    <textarea name="notes" rows="3" style="width:100%;"></textarea>
+    <br>
     <button type="submit">Visit Now</button>
 </form>
 

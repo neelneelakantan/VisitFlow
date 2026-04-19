@@ -27,8 +27,27 @@ def compute_next_check(company):
         return last + timedelta(days=company.cadence_days)
 
     if freq == "specific_date":
-        if company.specific_date:
-            return datetime.fromisoformat(company.specific_date)
+        if not company.specific_date:
+            return None
+
+        # Parse the milestone date and ensure timezone-aware
+        milestone_date = datetime.fromisoformat(company.specific_date)
+        if milestone_date.tzinfo is None:
+            milestone_date = milestone_date.replace(tzinfo=timezone.utc)
+
+        today = datetime.now(timezone.utc)
+        last_visit = company.last_checked
+
+        # Before the milestone → upcoming / due today
+        if today.date() <= milestone_date.date():
+            return milestone_date
+
+        # After the milestone:
+        # If no visit after the milestone → overdue
+        if last_visit is None or last_visit < milestone_date:
+            return milestone_date
+
+        # If visited after the milestone → clear overdue
         return None
 
     return None

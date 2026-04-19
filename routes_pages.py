@@ -312,8 +312,10 @@ async def harvester_promote(request: Request):
 
     # Promote to Companies (string only)
     companies = load_json("companies.json", default=[])
-    if name not in companies:
-        companies.append(name)
+
+    # Only add if not already present
+    if not any(c["name"] == name for c in companies):
+        companies.append(promoted_entry)
         save_json("companies.json", companies)
 
     return RedirectResponse("/companies/harvester", status_code=303)
@@ -492,32 +494,38 @@ def company_detail(request: Request, company_id: int):
 
 
 
+
 @router.post("/companies/{company_id}/visit")
-async def visit_now(company_id: int):
+async def visit_now(request: Request, company_id: int):
     company = instance.get_company(company_id)
     if company is None:
         raise HTTPException(status_code=404, detail="Company not found")
 
-    company.last_checked = datetime.now(timezone.utc)
-    company.updated_at = datetime.now(timezone.utc)
-    
+    # Read form
+    form = await request.form()
+    notes = form.get("notes", "").strip() or ""
+
+    # Mark visited (this updates last_checked AND persists)
     instance.mark_visited(company_id)
 
-    # Create a blank visit record
+    # Create visit record with notes
     record = VisitRecord(
-        raw_notes="",
+        raw_notes=notes,
         normalized_notes=None,
         structured_summary=None,
         insights=None,
         recommended_next_steps=None,
         tags=None,
         confidence=None,
-        narrative=None
+        narrative=None,
     )
 
     add_visit(record, company_id)
 
     return RedirectResponse(f"/companies/{company_id}", status_code=303)
+
+
+
 
 
 @router.post("/companies/{company_id}/apply")
