@@ -263,8 +263,8 @@ async def harvester_delete(request: Request):
 async def harvester_edit(request: Request, name: str):
     data = load_harvester()
     entry = next((e for e in data if e["name"] == name), None)
-    print("DEBUG: name param =", name)
-    print("DEBUG: harvester data =", load_harvester())
+    #print("DEBUG: name param =", name)
+    #print("DEBUG: harvester data =", load_harvester())
     return templates.TemplateResponse(
         "harvester_edit.html",
         {"request": request, "entry": entry},

@@ -1,8 +1,10 @@
 # routes_api_llm.py
 from fastapi import APIRouter, HTTPException
 from datetime import datetime
+
+from fastapi.responses import JSONResponse
 import store
-from llm_client import ask_gemini
+from llm_client import LLMError, ask_gemini
 import markdown
 from store import load_insight_cache, save_insight_cache
 
@@ -55,7 +57,16 @@ NO filler.
 Be concise, factual, and neutral.
 """
 
-    result = ask_gemini(prompt)
+    try:
+        result = ask_gemini(prompt)
+        #return {"ok": True, "text": text}
+
+    except LLMError as e:
+        return JSONResponse(
+            status_code=200,
+            content={"ok": False, "error_code": e.code, "message": e.message}
+        )
+
     html = markdown.markdown(result)
  
     # Save/overwrite to cache

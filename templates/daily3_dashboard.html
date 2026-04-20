@@ -1,6 +1,15 @@
 {% extends "base.html" %}
 {% block content %}
 
+<div id="llm-error-banner" 
+     style="display:none; 
+            background:#ffe5e5; 
+            border:1px solid #cc0000; 
+            padding:10px; 
+            margin-bottom:15px; 
+            border-radius:4px;">
+</div>
+
 <style>
 .insight-card {
     margin-top: 1rem;
@@ -74,63 +83,120 @@
 
 </form>
 
+<script>
+let lastInsightRequest = { start: null, end: null, force: false };
+</script>
+
+<script>
+function retryLastInsight() {
+    const { start, end, force } = lastInsightRequest;
+    if (start && end) {
+        fetchInsight(start, end, force);
+    }
+}
+</script>
+
+<script>
+async function fetchInsight(start, end, force=false) {
+    lastInsightRequest = { start, end, force };   // ← store last request
+
+    const loading = document.getElementById("insightLoading");
+    const result = document.getElementById("insightResult");
+    const banner = document.getElementById("llm-error-banner");
+
+    result.innerHTML = "";
+    banner.style.display = "none";
+    loading.style.display = "block";
+
+    try {
+        const url = `/api/llm/weekly-insight?start_date=${start}&end_date=${end}` + 
+                    (force ? "&force=true" : "");
+
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data.ok === false) {
+            banner.style.display = "block";
+            banner.innerHTML = `
+              <strong>LLM Error:</strong> ${data.message}
+              <br>
+              <button onclick="retryLastInsight()" style="margin-top:5px;">Retry</button>
+          `;
+            return;
+        }
+
+        if (data.insight_html) {
+            result.innerHTML = data.insight_html;
+        } else {
+            result.innerHTML = "<em>No insight available.</em>";
+        }
+
+    } finally {
+        loading.style.display = "none";
+    }
+}
+</script>
 
 <script>
 document.getElementById("insightForm").onsubmit = async (e) => {
-  e.preventDefault();
+    e.preventDefault();
+    const start = e.target.start.value;
+    const end = e.target.end.value;
+    fetchInsight(start, end, false);
+};
+</script>
+<script>
+document.getElementById("thisWeekBtn").onclick = () => {
+    const start = "{{ metrics.week_start }}";
+    const end = "{{ metrics.week_end }}";
 
-  const start = e.target.start.value;
-  const end = e.target.end.value;
+    document.querySelector("input[name='start']").value = start;
+    document.querySelector("input[name='end']").value = end;
 
-  const loading = document.getElementById("insightLoading");
-  const result = document.getElementById("insightResult");
+    fetchInsight(start, end, false);
+};
+</script>
 
-  // Reset UI
-  result.innerHTML = "";
-  loading.style.display = "block";
+<script>
+document.getElementById("forceBtn").onclick = () => {
+    const start = document.querySelector("input[name='start']").value;
+    const end = document.querySelector("input[name='end']").value;
+    if (!start || !end) return;
+    fetchInsight(start, end, true);
+};
+</script>
 
-  try {
+<script>
+async function loadWeeklyInsight() {
+    const start = "{{ metrics.week_start }}";
+    const end = "{{ metrics.week_end }}";
+
     const res = await fetch(`/api/llm/weekly-insight?start_date=${start}&end_date=${end}`);
     const data = await res.json();
 
-    result.innerHTML = data.insight_html;
-  } finally {
-    loading.style.display = "none";
-  }
-};
+    const banner = document.getElementById("llm-error-banner");
 
-document.getElementById("thisWeekBtn").onclick = () => {
-  const start = "{{ metrics.week_start }}";
-  const end = "{{ metrics.week_end }}";
+    if (!data.ok && data.error_code) {
+        banner.style.display = "block";
+        banner.innerHTML = `
+          <strong>LLM Error:</strong> ${data.message}
+          <br>
+          <button onclick="retryLastInsight()" style="margin-top:5px;">Retry</button>
+      `;
+        return;
+    }
 
-  document.querySelector("input[name='start']").value = start;
-  document.querySelector("input[name='end']").value = end;
+    // No error → hide banner
+    banner.style.display = "none";
 
-  // Trigger the form submit programmatically
-  document.getElementById("insightForm").dispatchEvent(new Event("submit"));
-};
+    // Render insight
+    if (data.insight_html) {
+        document.getElementById("insightResult").innerHTML = data.insight_html;
+    }
+}
 
-document.getElementById("forceBtn").onclick = async () => {
-  const start = document.querySelector("input[name='start']").value;
-  const end = document.querySelector("input[name='end']").value;
-
-  if (!start || !end) return;
-
-  const loading = document.getElementById("insightLoading");
-  const result = document.getElementById("insightResult");
-
-  result.innerHTML = "";
-  loading.style.display = "block";
-
-  try {
-    const res = await fetch(`/api/llm/weekly-insight?start_date=${start}&end_date=${end}&force=true`);
-    const data = await res.json();
-    result.innerHTML = data.insight_html;
-  } finally {
-    loading.style.display = "none";
-  }
-};
-
+// Load on page load
+loadWeeklyInsight();
 </script>
 
 {% endblock %}
