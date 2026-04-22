@@ -284,20 +284,48 @@ HARVESTER_FILE = BASE_DIR / "data" / "harvester.json"
 HARVESTER_FILE.parent.mkdir(exist_ok=True)
 
 def load_harvester():
-    if not HARVESTER_FILE.exists():
-        return []
-    text = HARVESTER_FILE.read_text().strip()
-    if not text:
-        return []
-    try:
-        return json.loads(text)
-    except:
-        return []
+    data = load_json("harvester.json", default=[])
+    normalized = []
+
+    for item in data:
+        if isinstance(item, str):
+            normalized.append({
+                "name": item,
+                "source_url": None,
+                "careers_url": None,
+                "last_visited": None,
+            })
+        else:
+            # ensure field exists
+            if "last_visited" not in item:
+                item["last_visited"] = None
+            normalized.append(item)
+
+    # --- SORTING: never visited → oldest → newest ---
+    def sort_key(e):
+        ts = e.get("last_visited")
+        if not ts:
+            return (0, datetime.min)  # never visited → top
+        return (1, datetime.fromisoformat(ts))
+
+    return sorted(normalized, key=sort_key)
+
 
 
 def save_harvester(items: list[str]):
     items = sorted(items, key=lambda x: x.lower())
     HARVESTER_FILE.write_text(json.dumps(items, indent=2))
+
+
+def mark_harvester_visited(name: str):
+    data = load_harvester()
+    now = datetime.now(timezone.utc).isoformat()
+
+    for entry in data:
+        if entry["name"] == name:
+            entry["last_visited"] = now
+
+    save_harvester(data)
 
 
 INSIGHT_CACHE_PATH = Path("data/insight_cache.json")
@@ -367,11 +395,23 @@ def load_harvester():
                 "name": item,
                 "source_url": None,
                 "careers_url": None,
+                "last_visited": None,
             })
         else:
+            # ensure field exists
+            if "last_visited" not in item:
+                item["last_visited"] = None
             normalized.append(item)
 
-    return normalized
+    # --- SORTING: never visited → oldest → newest ---
+    def sort_key(e):
+        ts = e.get("last_visited")
+        if not ts:
+            return (0, datetime.min)  # never visited → top
+        return (1, datetime.fromisoformat(ts))
+
+    return sorted(normalized, key=sort_key)
+
 
 def save_harvester(data):
     save_json("harvester.json", data)
@@ -468,18 +508,19 @@ def extract_company_from_url(url: str):
         return company, careers_url
 
     # -----------------------------
-    # Workday (best effort)
+    # Workday (correct extraction)
     # Example: https://acme.wd5.myworkdayjobs.com/en-US/AcmeCareers/job/...
     # -----------------------------
-    if "myworkdayjobs.com" in domain and len(path_parts) >= 1:
-        
-        slug = path_parts[0]
-        if slug.lower() == "en-us" and len(path_parts) >1:
-            slug = path_parts[1]
+    if "myworkdayjobs.com" in domain:
+        # domain example: workiva.wd503.myworkdayjobs.com
+        host_parts = domain.split(".")
+        company = host_parts[0]  # always the company name
 
-        clean = normalize_company_name(slug)
-        careers_url = f"https://{domain}/{slug}"
+        # careers URL is simply the base domain
+        careers_url = f"https://{domain}"
+
         return company, careers_url
+
 
     # -----------------------------
     # Taleo (best effort)

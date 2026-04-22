@@ -23,6 +23,11 @@
         <label><strong>Source URL:</strong></label><br>
         <input type="text" name="source_url" value="{{ entry.source_url }}" style="width: 60%;">
     </p>
+    {% if entry.last_visited %}
+        <p><strong>Last visited:</strong> {{ entry.last_visited }}</p>
+    {% else %}
+        <p><strong>Last visited:</strong> Never</p>
+    {% endif %}
 
     <button type="submit">Save</button>
 </form>

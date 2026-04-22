@@ -4,7 +4,7 @@ from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
 import store
-from store import load_freenotes, add_freenote, add_visit, instance, save_companies, get_visit, save_visits
+from store import load_freenotes, add_freenote, add_visit, instance, mark_harvester_visited, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
 from store import load_harvester, save_harvester, extract_company_from_url, load_json, save_json
 from templates_engine import templates
@@ -244,6 +244,10 @@ async def harvester_list(request: Request, q: str = ""):
         {"request": request, "items": items, "q": q},
     )
 
+@router.get("/companies/harvester/visit")
+def harvester_visit(name: str, url: str):
+    mark_harvester_visited(name)
+    return RedirectResponse(url)
 
 
 @router.post("/companies/harvester/delete")
@@ -322,6 +326,7 @@ async def harvester_promote(request: Request):
         else:
             remaining.append(entry)
 
+    mark_harvester_visited(name)
     save_harvester(remaining)
 
     # Promote to Companies (string only)
@@ -357,6 +362,7 @@ async def companies_harvest(request: Request):
             name = line
             careers_url = None
             source_url = None
+            last_visited = None
 
         if name.lower() in existing:
             skipped += 1
@@ -366,6 +372,7 @@ async def companies_harvest(request: Request):
             "name": name,
             "source_url": source_url,
             "careers_url": careers_url,
+            "last_visited": datetime.now(timezone.utc).isoformat(),
         }
 
         data.append(entry)

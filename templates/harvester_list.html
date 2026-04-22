@@ -19,11 +19,31 @@
             <strong>{{ entry.name }}</strong>
 
             {% if entry.source_url %}
-                — <a href="{{ entry.source_url }}" target="_blank">Source</a>
+                — <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.source_url }}" target="_blank">
+                    Source
+                </a>
             {% endif %}
 
             {% if entry.careers_url %}
-                — <a href="{{ entry.careers_url }}" target="_blank">Careers</a>
+                — <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.careers_url }}" target="_blank">
+                    Careers
+                </a>
+            {% endif %}
+
+            {% if entry.last_visited %}
+                <span class="small text-muted">
+                    Last visited:
+                    {% if entry.last_visited %}
+                        {{ entry.last_visited[:10] }}
+                    {% else %}
+                        Never
+                    {% endif %}
+
+                </span>
+            {% else %}
+                <span class="small text-muted">
+                    Never visited
+                </span>
             {% endif %}
 
             <form method="post" action="/companies/harvester/promote" style="display:inline;">
@@ -44,7 +64,15 @@
 <p><em>No harvested companies yet.</em></p>
 {% endif %}
 
-
 <p><a href="/companies/harvest">Add more →</a></p>
+
+<script>
+document.addEventListener("visibilitychange", function () {
+    if (document.visibilityState === "visible") {
+        // When the tab becomes active again, reload to show updated order
+        window.location.reload();
+    }
+});
+</script>
 
 {% endblock %}
