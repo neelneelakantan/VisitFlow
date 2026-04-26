@@ -556,6 +556,10 @@ def extract_company_from_url(url: str):
     # Fallback: domain-based extraction
     # -----------------------------
     company = domain.split(".")[0].replace("-", " ").title()
+    # if company is jobs or careers, try the next segment for example jobs.acme.com, the company shoudl be acme and not jobs
+    if company.lower() in ["jobs", "careers"] and len(domain.split(".")) > 2:
+        company = domain.split(".")[1].replace("-", " ").title()
+    print (f"DEBUG: Fallback extraction. domain='{domain}', company='{company}'")
     careers_url = f"https://{domain}/careers"
     return company, careers_url
 
