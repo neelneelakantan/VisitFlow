@@ -234,6 +234,8 @@ def create_company_form(
 async def harvester_list(request: Request, q: str = ""):
     data = load_harvester()
 
+    total = len(data)
+
     if q:
         items = [e for e in data if q.lower() in e["name"].lower()]
     else:
@@ -241,7 +243,7 @@ async def harvester_list(request: Request, q: str = ""):
 
     return templates.TemplateResponse(
         "harvester_list.html",
-        {"request": request, "items": items, "q": q},
+        {"request": request, "items": items, "q": q, "total": total},
     )
 
 @router.get("/companies/harvester/visit")
