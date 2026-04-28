@@ -3,6 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
+from search_utils import unified_search
 import store
 from store import load_freenotes, add_freenote, add_visit, instance, mark_harvester_visited, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
@@ -105,6 +106,11 @@ def list_companies_page(
     companies = instance.list_companies()
 
     # --- Search filter ---
+    if q:
+        companies, _ = unified_search(q, instance, load_harvester())
+    else:
+        companies = instance.list_companies()
+
     if q:
         q_lower = q.lower()
         companies = [
@@ -237,7 +243,7 @@ async def harvester_list(request: Request, q: str = ""):
     total = len(data)
 
     if q:
-        items = [e for e in data if q.lower() in e["name"].lower()]
+        _, items = unified_search(q, instance, data)
     else:
         items = data
 
@@ -587,6 +593,25 @@ def delete_company_confirm(request: Request, company_id: int):
             "request": request,
             "company": company,
             "visits": visits
+        }
+    )
+
+
+
+@router.get("/search", response_class=HTMLResponse)
+def unified_search_page(request: Request, q: str = ""):
+    from search_utils import unified_search
+    from store import load_harvester
+
+    companies, harvested = unified_search(q, instance, load_harvester())
+
+    return templates.TemplateResponse(
+        "search_results.html",
+        {
+            "request": request,
+            "q": q,
+            "companies": companies,
+            "harvested": harvested,
         }
     )
 

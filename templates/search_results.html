@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Search Results for "{{ q }}"</h2>
+
+<h3>Companies</h3>
+<ul>
+{% for c in companies %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>No matches</li>
+{% endfor %}
+</ul>
+
+<h3>Harvester</h3>
+<ul>
+{% for h in harvested %}
+    <li>
+        {{ h.name }}
+        {% if h.source_url %}
+            — <a href="{{ h.source_url }}" target="_blank">Source</a>
+        {% endif %}
+        {% if h.careers_url %}
+            — <a href="{{ h.careers_url }}" target="_blank">Careers</a>
+        {% endif %}
+    </li>
+{% else %}
+    <li>No matches</li>
+{% endfor %}
+</ul>
+
+{% endblock %}

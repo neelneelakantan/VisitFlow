@@ -39,9 +39,18 @@
 
 <h2>Dashboard</h2>
 
-<p><a href="/companies/new">+ Add Company</a></p>
+<p>
+    Total companies: {{ total }}
+    <a href="/companies/new">+ Add Company</a>
 
-<p>Total companies: {{ total }}</p>
+    <!-- Search Bar -->
+    <form method="get" action="/search">
+        <input type="text" name="q" placeholder="Search..." value="{{ q }}" />
+        <button type="submit">Search</button>
+    </form>
+</p>
+
+
 
 <h3>Overdue</h3>
 <ul>
