@@ -23,6 +23,9 @@ def dashboard_page(request: Request):
     today = datetime.now().date()
 
     total = len(companies)
+    data = load_harvester()
+
+    total_harvested = len(data)
 
     overdue = []
     due_today = []
@@ -83,6 +86,7 @@ def dashboard_page(request: Request):
         {
             "request": request,
             "total": total,
+            "total_harvested": total_harvested,
             "overdue": overdue,
             "due_today": due_today,
             "upcoming_grouped": grouped_upcoming,
