@@ -12,10 +12,11 @@
             <strong>{{ entry.name }}</strong>
 
             {% if entry.source_url %}
-                - <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.source_url }}" target="_blank">Source</a>
+                - <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.source_url | urlencode }}" target="_blank">Source</a>
+
             {% endif %}
             {% if entry.careers_url %}
-                - <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.careers_url }}" target="_blank">Careers</a>
+                - <a href="/companies/harvester/visit?name={{ entry.name }}&url={{ entry.careers_url | urlencode }}" target="_blank">Careers</a>
             {% endif %}
             {% if entry.last_visited %}
                 <span class="small text-muted">

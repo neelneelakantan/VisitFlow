@@ -3,7 +3,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
-from search_utils import unified_search
+from search_utils import safe_url, unified_search
 import store
 from store import load_freenotes, add_freenote, add_visit, instance, mark_harvester_visited, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
@@ -259,7 +259,7 @@ async def harvester_list(request: Request, q: str = ""):
 @router.get("/companies/harvester/visit")
 def harvester_visit(name: str, url: str):
     mark_harvester_visited(name)
-    return RedirectResponse(url)
+    return RedirectResponse(safe_url(url))
 
 
 @router.post("/companies/harvester/delete")
@@ -292,7 +292,8 @@ async def harvester_edit_post(request: Request):
     form = await request.form()
 
     old_name = form["old_name"]
-    source_url = form.get("source_url", "").strip() or None
+    raw_url = form.get("source_url", "").strip()
+    source_url = raw_url or None
 
     data = load_harvester()
 

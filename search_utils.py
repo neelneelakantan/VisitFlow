@@ -1,5 +1,11 @@
 # search_utils.py
 
+import urllib.parse
+
+def safe_url(url: str) -> str:
+    return urllib.parse.quote(url, safe=":/?=&%")
+
+
 def unified_search(q: str, company_store, harvester_list):
     q_lower = q.lower()
 
