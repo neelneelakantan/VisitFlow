@@ -29,4 +29,13 @@
 {% endfor %}
 </ul>
 
+{% if google_url %}
+    <h3>No results found</h3>
+    <p>
+        <a href="{{ google_url }}" target="_blank">
+            Search Google for "{{ q }}"
+        </a>
+    </p>
+{% endif %}
+
 {% endblock %}

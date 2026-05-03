@@ -610,6 +610,19 @@ def unified_search_page(request: Request, q: str = ""):
 
     companies, harvested = unified_search(q, instance, load_harvester())
 
+    if not companies and not harvested:
+        google_url = f"https://www.google.com/search?q={safe_url(q)}"
+        return templates.TemplateResponse(
+            "search_results.html",
+            {
+                "request": request,
+                "q": q,
+                "companies": [],
+                "harvested": [],
+                "google_url": google_url,
+            }
+        )
+
     return templates.TemplateResponse(
         "search_results.html",
         {
