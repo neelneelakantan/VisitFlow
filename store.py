@@ -555,11 +555,24 @@ def extract_company_from_url(url: str):
     # -----------------------------
     # Fallback: domain-based extraction
     # -----------------------------
-    company = domain.split(".")[0].replace("-", " ").title()
-    # if company is jobs or careers, try the next segment for example jobs.acme.com, the company shoudl be acme and not jobs
-    if company.lower() in ["jobs", "careers", "apply", "join"] and len(domain.split(".")) > 2:
-        company = domain.split(".")[1].replace("-", " ").title()
-    print (f"DEBUG: Fallback extraction. domain='{domain}', company='{company}'")
+    parts = domain.split(".")
+
+    # Standard logic: Grab the part right before the TLD (.com, .net, etc.)
+    # For jobs.us.pwc.com, this is index -2 ('pwc')
+    # For amazon.jobs, this is index -2 ('amazon')
+    company_idx = -2
+    company = parts[company_idx].replace("-", " ").title()
+
+    print(f"DEBUG: Initial fallback extraction. domain='{domain}', company='{company}'")
+    # LIST OF NOISE: If the word we found is a generic region or job term, move one more step left
+    # This fixes the 'Pwc' vs 'Us' issue
+    skip_terms = ["us", "uk", "de", "global", "jobs", "careers", "apply", "join"]
+
+    if company.lower() in skip_terms and len(parts) > abs(company_idx):
+        company_idx -= 1
+        company = parts[company_idx].replace("-", " ").title()
+
+    print(f"DEBUG: Fallback extraction. domain='{domain}', company='{company}'")
     careers_url = f"https://{domain}/careers"
     return company, careers_url
 

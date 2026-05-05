@@ -45,10 +45,12 @@ Analyze these Daily3 entries between {start_date} and {end_date}:
 
 Return ONLY the following, in 2–3 short bullet points each:
 
+- Identify any action items or follow‑ups related to the job search
 - 2 patterns you notice (max 20 words each)
 - 1 thing to continue (max 20 words)
 - 1 thing to adjust next week (max 20 words)
-= if notes are present, also return 1 insight from the notes (max 20 words)
+- if notes are present, also return 1 insight from the notes (max 20 words)
+- if request provided multiple weeks of data, provide a executive summary of 3 points, in 100 words or less each.
 
 NO reflection paragraphs.
 NO motivational tone.
