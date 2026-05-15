@@ -54,15 +54,22 @@
 </p>
 
 
-
 <h3>Overdue</h3>
-<ul>
-{% for c in overdue %}
-    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
-{% else %}
-    <li>None</li>
+
+{% for tier, items in overdue_grouped.items() %}
+    {% if items %}
+        <h4>{{ tier|capitalize }} Value</h4>
+        <ul>
+            {% for c, next_date in items %}
+                <li>
+                    <a href="/companies/{{ c.id }}">{{ c.name }}</a>
+                    — {{ next_date }}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
 {% endfor %}
-</ul>
+
 
 <h3>Due Today</h3>
 <ul>
@@ -102,6 +109,15 @@
 <h3>No Due date</h3>
 <ul>
 {% for c in no_duedate %}
+    <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
+{% else %}
+    <li>None</li>
+{% endfor %}
+</ul>
+
+<h3>Completed</h3>
+<ul>
+{% for c in completed %}
     <li><a href="/companies/{{ c.id }}">{{ c.name }}</a></li>
 {% else %}
     <li>None</li>

@@ -32,6 +32,7 @@ def dashboard_page(request: Request):
     upcoming = []
     never_checked = []
     no_duedate = []
+    completed = []
 
     value_order = {"high": 0, "medium": 1, "low": 2}
 
@@ -54,6 +55,8 @@ def dashboard_page(request: Request):
             due_today.append(c)
         elif today < next_date <= today + timedelta(days=7):
             upcoming.append(c)
+        else:
+            completed.append(c)
 
     weekly = store.compute_weekly_metrics()
     today_entry = store.load_daily3_for_date(today.isoformat())
@@ -75,11 +78,24 @@ def dashboard_page(request: Request):
         )
     )
 
+    overdue.sort(
+        key=lambda c: (
+            value_order.get(c.value, 3),
+            compute_next_check(c)
+        )
+    )
+
     grouped_upcoming = {"high": [], "medium": [], "low": [], "unknown": []}
     for c in upcoming:
         tier = c.value.lower() if c.value else "unknown"
         next_date = compute_next_check(c).date()
         grouped_upcoming[tier].append((c, next_date))
+
+    grouped_overdue = {"high": [], "medium": [], "low": [], "unknown": []}
+    for c in overdue:
+        tier = c.value.lower() if c.value else "unknown"
+        next_date = compute_next_check(c).date()
+        grouped_overdue[tier].append((c, next_date))
 
     return templates.TemplateResponse(
         "dashboard.html",
@@ -90,11 +106,13 @@ def dashboard_page(request: Request):
             "overdue": overdue,
             "due_today": due_today,
             "upcoming_grouped": grouped_upcoming,
+            "overdue_grouped": grouped_overdue,
             "no_duedate" : no_duedate,
             "never_checked": never_checked,
             "weekly": weekly,
             "today_entry": today_entry,
             "computed_completion": computed_completion,
+            "completed": completed,
         }
     )
 
