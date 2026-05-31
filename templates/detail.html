@@ -74,7 +74,7 @@
 
     <div><strong>Value:</strong> {{ company.value }}</div>
 
-        {% if company.frequency not in ['monthly', 'weekly', 'daily'] %}
+        {% if company.frequency not in ['monthly', 'biweekly' 'weekly', 'daily'] %}
             <div><strong>Cadence New:</strong> {{ company.cadence_days }} days</div>
         {% endif %}
 

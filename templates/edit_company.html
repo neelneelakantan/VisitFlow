@@ -28,6 +28,7 @@
     <select name="frequency" id="frequency-select">
         <option value="daily"        {% if freq == "daily" %}selected{% endif %}>Daily</option>
         <option value="weekly"       {% if freq == "weekly" %}selected{% endif %}>Weekly</option>
+        <option value="biweekly"     {% if freq == "biweekly" %}selected{% endif %}>Biweekly</option>
         <option value="monthly"      {% if freq == "monthly" %}selected{% endif %}>Monthly</option>
         <option value="custom"       {% if freq == "custom" %}selected{% endif %}>Custom</option>
         <option value="specific_date" {% if freq == "specific_date" %}selected{% endif %}>Specific Date</option>

@@ -17,8 +17,10 @@ def compute_next_check(company):
         return last + timedelta(days=1)
 
     if freq == "weekly":
-        # cadence_days still supported
-        return last + timedelta(days=company.cadence_days)
+        return last + timedelta(days=7)
+
+    if freq == "biweekly":
+        return last + timedelta(days=14)
 
     if freq == "monthly":
         return last + relativedelta(months=1)
