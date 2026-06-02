@@ -553,6 +553,22 @@ def extract_company_from_url(url: str):
         return company, careers_url
 
     # -----------------------------
+    # Oracle Cloud HCM (tenant-based)
+    # Example:
+    #   https://ebxr.fa.us2.oraclecloud.com/...
+    #   https://fa-epcb-saasfaprod1.fa.ocs.oraclecloud.com/...
+    # -----------------------------
+    if "oraclecloud.com" in domain:
+        # Use the FULL subdomain as the unique company key
+        # e.g., "ebxr.fa.us2.oraclecloud.com" → "Ebxr Fa Us2"
+        sub = domain.replace(".oraclecloud.com", "")
+        company = sub.replace(".", " ").replace("-", " ").title()
+
+        # Careers URL = root of the tenant
+        careers_url = f"https://{domain}"
+        return company, careers_url
+
+    # -----------------------------
     # Fallback: domain-based extraction
     # -----------------------------
     parts = domain.split(".")
