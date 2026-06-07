@@ -50,9 +50,10 @@
                 </span>
             {% endif %}
 
-            <form method="post" action="/companies/harvester/promote" style="display:inline;">
-                <input type="hidden" name="name" value="{{ entry.name }}">
-                <button type="submit">Promote → Companies</button>
+            <form action="/new" method="get" style="display:inline;">
+                <input type="hidden" name="company_id" value="">
+                <input type="hidden" name="prefill" value="Harvester: {{ entry.name }}&#10;">
+                <button type="submit">Add Note</button>
             </form>
 
             <form method="post" action="/companies/harvester/delete" style="display:inline;">

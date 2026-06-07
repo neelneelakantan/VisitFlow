@@ -11,7 +11,7 @@
 <form action="/new" method="post">
     <input type="hidden" name="company_id" value="{{ company_id }}">
     <label for="notes"><strong>Notes</strong></label><br>
-    <textarea id="notes" name="notes" rows="8" style="width:100%;"></textarea>
+    <textarea id="notes" name="notes" rows="8" style="width:100%;">{{ prefill }}</textarea>
 
     <br><br>
     <button type="submit">Submit</button>

@@ -683,8 +683,7 @@ def test_page(request: Request):
 
 @router.get("/timeline")
 def timeline(request: Request):
-    visits = store.VISIT_STORE
-
+    visits = sorted(store.VISIT_STORE, key=lambda v: v.timestamp, reverse=True)
     enriched = []
     for v in visits:
         # Convert timestamp to local timezone
@@ -744,8 +743,9 @@ def visit_detail(request: Request, visit_id: str):
     )
 
 
+
 @router.get("/new")
-def new_visit(request: Request, company_id: Optional[int] = None):
+def new_visit(request: Request, company_id: Optional[str] = None, prefill: str = ""):
     company = None
     if company_id:
         company = instance.get_company(int(company_id))
@@ -755,7 +755,8 @@ def new_visit(request: Request, company_id: Optional[int] = None):
         {
             "request": request,
             "company_id": company_id,
-            "company": company
+            "company": company,
+            "prefill": prefill
         }
     )
 
