@@ -2,6 +2,11 @@
 from models import VisitRecord
 from datetime import datetime, timezone
 
+import re
+
+def extract_tags(text: str) -> list[str]:
+    return re.findall(r"#(\w+)", text)
+
 # -----------------------------
 # 1. INGEST
 # -----------------------------
@@ -120,6 +125,7 @@ def build_visit_record(raw_text: str) -> VisitRecord:
     record.insights = generate_insights(record.structured_summary)
     # Add sentiment/energy detection
     record.insights["sentiment_energy"] = detect_sentiment_energy(record.normalized_notes)
+    record.tags = extract_tags(record.raw_notes)
     record.narrative = generate_narrative(record)
 
     record.recommended_next_steps = generate_next_steps(

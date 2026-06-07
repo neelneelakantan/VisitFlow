@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Daily3 Search</h2>
+
+<form method="get" action="/daily3/search">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search text, #tag, or /regex/" style="width:60%;">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+{% if results %}
+    <ul>
+    {% for date, entry in results %}
+        <li>
+            <strong>{{ date }}</strong><br>
+            {{ entry.notes or "" }}<br>
+            <a href="/daily3?date={{ date }}">View Day</a>
+        </li>
+    {% endfor %}
+    </ul>
+{% else %}
+    <p>No matches found.</p>
+{% endif %}
+
+{% endblock %}

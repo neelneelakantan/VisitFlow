@@ -1,6 +1,16 @@
 {% extends "base.html" %}
 
 {% block content %}
+
+<form method="get" action="/timeline">
+    <input type="text"
+           name="q"
+           value="{{ q }}"
+           placeholder="Filter by text or #tag"
+           style="width: 60%;">
+    <button type="submit">Search</button>
+</form>
+
 <h1>Timeline</h1>
 <p><a href="/new">+ Add Visit</a></p>
 {% if visits %}

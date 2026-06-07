@@ -1,3 +1,5 @@
+from ast import pattern
+
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
@@ -682,8 +684,13 @@ def test_page(request: Request):
 
 
 @router.get("/timeline")
-def timeline(request: Request):
+def timeline(request: Request, q: str = ""):
     visits = sorted(store.VISIT_STORE, key=lambda v: v.timestamp, reverse=True)
+
+    if q:
+        q_lower = q.lower()
+        visits = [v for v in visits if q_lower in v.raw_notes.lower()]
+
     enriched = []
     for v in visits:
         # Convert timestamp to local timezone
@@ -945,6 +952,54 @@ def daily3_submit(
 
     return RedirectResponse(f"/daily3?date={date}", status_code=303)
 
+
+@router.get("/daily3/search")
+def daily3_search(request: Request, q: str = ""):
+    """
+    Unified Daily3 search with optional regex.
+    Searches across all Daily3 entries (plans, results, outcomes, notes).
+    """
+    all_entries = store.load_daily3()  # dict: date → entry
+
+    results = []
+    # Regex mode: /pattern/
+    if q.startswith("/") and q.endswith("/") and len(q) > 2:
+        import re
+        pattern = q[1:-1]
+        try:
+            regex = re.compile(pattern, re.IGNORECASE)
+            for date, entry in all_entries.items():
+                text = " ".join(str(v) for v in entry.values())
+                if regex.search(text):
+                    results.append((date, entry))
+        except re.error:
+            # fallback to simple search
+            q_lower = q.lower()
+            for date, entry in all_entries.items():
+                text = " ".join(str(v) for v in entry.values()).lower()
+                if q_lower in text:
+                    results.append((date, entry))
+
+    else:
+        # Simple substring search
+        if q:
+            q_lower = q.lower()
+            for date, entry in all_entries.items():
+                text = " ".join(str(v) for v in entry.values()).lower()
+                if q_lower in text:
+                    results.append((date, entry))
+
+    # Sort newest first
+    results.sort(key=lambda x: x[0], reverse=True)
+
+    return templates.TemplateResponse(
+        "daily3_search.html",
+        {
+            "request": request,
+            "q": q,
+            "results": results,
+        }
+    )
 
 @router.get("/daily3/summary")
 def daily3_dashboard(request: Request):
