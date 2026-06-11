@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Unified Search</h2>
+
+<form method="get" action="/search">
+    <input type="text" name="q" value="{{ q }}" placeholder="Search across all data" style="width:60%;">
+    <button type="submit">Search</button>
+</form>
+
+<hr>
+
+{% if results %}
+<ul>
+{% for r in results %}
+    <li>
+        <strong>{{ r.source }}</strong> — {{ r.timestamp }}
+        <br>
+        {{ r.text[:200] }}...
+        <br>
+
+        {% if r.source == "daily3" %}
+            <a href="/daily3?date={{ r.raw.date }}">View Daily3</a>
+        {% elif r.source == "visit" %}
+            <a href="/visit/{{ r.id  }}">View Visit</a>
+        {% elif r.source == "harvester" %}
+            <a href="/companies/harvester/edit?name={{ r.company }}">Edit</a>
+            {% if r.raw.source_url %}
+                | <a href="/companies/harvester/visit?name={{ r.company }}&url={{ r.raw.source_url }}">Visit</a>
+            {% endif %}
+        {% elif r.source == "company" %}
+            <a href="/companies/{{ r.raw.id }}">View Company</a>
+        {% endif %}
+    </li>
+{% endfor %}
+</ul>
+{% else %}
+<p>No matches found.</p>
+{% endif %}
+
+{% if pending %}
+<h3>Pending Follow-Ups</h3>
+<ul>
+{% for p in pending %}
+    <li>
+        <strong>{{ p.company }}</strong> — {{ p.timestamp }}
+        <br>
+        {{ p.text[:200] }}...
+    </li>
+{% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}

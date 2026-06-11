@@ -12,13 +12,15 @@
 
 {% if results %}
     <ul>
-    {% for date, entry in results %}
-        <li>
-            <strong>{{ date }}</strong><br>
-            {{ entry.notes or "" }}<br>
-            <a href="/daily3?date={{ date }}">View Day</a>
-        </li>
-    {% endfor %}
+
+        {% for r in results %}
+            <li>
+                <strong>{{ r.date }}</strong><br>
+                {% if r.entry.notes %}{{ r.entry.notes }}<br> {% else %} 👇<br>{% endif %}
+                <a href="/daily3?date={{ r.date }}">View Day</a>
+            </li>
+        {% endfor %}
+
     </ul>
 {% else %}
     <p>No matches found.</p>

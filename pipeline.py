@@ -125,7 +125,7 @@ def build_visit_record(raw_text: str) -> VisitRecord:
     record.insights = generate_insights(record.structured_summary)
     # Add sentiment/energy detection
     record.insights["sentiment_energy"] = detect_sentiment_energy(record.normalized_notes)
-    record.tags = extract_tags(record.raw_notes)
+    record.tags = extract_tags(record.raw_notes) + auto_tags(record.raw_notes)
     record.narrative = generate_narrative(record)
 
     record.recommended_next_steps = generate_next_steps(
@@ -360,3 +360,24 @@ def detect_emotional_trends(structured: dict, insights: dict) -> list:
 
     return trends
 
+
+AUTO_TAG_RULES = [
+    (r"\binterview\b|\bscreen\b|\bloop\b\talent\b", "#interview"),
+    (r"\bfollow.?up\b|\bthank.?you\b", "#followup"),
+    (r"\bemail\b|\bsent\b", "#email"),
+    (r"\bwalk\b|\bsteps\b", "#walk"),
+    (r"\bexercise\b|\bworkout\b", "#exercise"),
+    (r"\bcoding\b|\bdebug\b|\brefactor\b", "#coding"),
+    (r"\bsql\b", "#sql"),
+    (r"\bcontrol plane\b", "#controlplane"),
+    (r"\bdata plane\b", "#dataplane"),
+    (r"\bjob\b|\bapply\b|\bapplication\b", "#jobsearch"),
+    (r"\bdesign\b|\barchitecture\b", "#architecture"),
+]
+
+def auto_tags(text: str) -> list[str]:
+    tags = []
+    for pattern, tag in AUTO_TAG_RULES:
+        if re.search(pattern, text, re.IGNORECASE):
+            tags.append(tag)
+    return tags

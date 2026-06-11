@@ -5,7 +5,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from datetime import datetime, timezone, timedelta
 from fastapi import Form
 from models import Company, VisitRecord
-from search_utils import safe_url, unified_search
+from search_utils import safe_url, search_entities
 import store
 from store import load_freenotes, add_freenote, add_visit, instance, mark_harvester_visited, save_companies, get_visit, save_visits
 from store import load_companies, load_visits, get_freenote, update_freenote, delete_freenote
@@ -14,6 +14,10 @@ from templates_engine import templates
 from pipeline import build_visit_record
 from utils import compute_next_check
 from typing import Optional
+from search_engine import refine_search, refine_search
+from followup_engine import find_pending_followups
+from store import normalize_daily3, normalize_company, normalize_harvester
+
 import re
 
 
@@ -131,7 +135,7 @@ def list_companies_page(
 
     # --- Search filter ---
     if q:
-        companies, _ = unified_search(q, instance, load_harvester())
+        companies, _ = search_entities(q, instance, load_harvester())
     else:
         companies = instance.list_companies()
 
@@ -267,7 +271,7 @@ async def harvester_list(request: Request, q: str = ""):
     total = len(data)
 
     if q:
-        _, items = unified_search(q, instance, data)
+        _, items = search_entities(q, instance, data)
     else:
         items = data
 
@@ -507,6 +511,33 @@ def company_detail(request: Request, company_id: int):
         if v.company_id == company_id
     ]
 
+
+    # Lazy backfill for each visit
+    updated = False
+
+    for v in visits:
+        needs_processing = (
+            not v.narrative or
+            not v.structured_summary or
+            not v.insights or
+            not v.recommended_next_steps or
+            not v.normalized_notes
+        )
+
+        if needs_processing:
+            processed = build_visit_record(v.raw_notes)
+
+            v.normalized_notes = processed.normalized_notes
+            v.structured_summary = processed.structured_summary
+            v.insights = processed.insights
+            v.recommended_next_steps = processed.recommended_next_steps
+            v.narrative = processed.narrative
+
+            updated = True
+
+    if updated:
+        save_visits(store.VISIT_STORE)
+    
     # Sort newest first
     visits.sort(key=lambda v: v.timestamp, reverse=True)
 
@@ -623,12 +654,11 @@ def delete_company_confirm(request: Request, company_id: int):
 
 
 
-@router.get("/search", response_class=HTMLResponse)
+@router.get("/search_entities", response_class=HTMLResponse)
 def unified_search_page(request: Request, q: str = ""):
-    from search_utils import unified_search
     from store import load_harvester
 
-    companies, harvested = unified_search(q, instance, load_harvester())
+    companies, harvested = search_entities(q, instance, load_harvester())
 
     if not companies and not harvested:
         google_url = f"https://www.google.com/search?q={safe_url(q)}"
@@ -650,6 +680,106 @@ def unified_search_page(request: Request, q: str = ""):
             "q": q,
             "companies": companies,
             "harvested": harvested,
+        }
+    )
+
+# This is global search across all data sources, with followup detection and prioritization
+@router.get("/search")
+def unified_search_all(request: Request, q: str = ""):
+    entries = []
+
+    # -------------------------
+    # 1. VISITS
+    # -------------------------
+    for v in store.VISIT_STORE:
+        company_name = ""
+        if v.company_id is not None:
+            c = instance.get_company(v.company_id)
+            if c:
+                company_name = c.name
+
+        entries.append({
+            "source": "visit",
+            "id": v.visit_id,
+            "company": company_name,
+            "timestamp": v.timestamp,
+            "text": v.raw_notes or "",
+            "tags": v.tags or [],
+            "raw": v
+        })
+
+    # -------------------------
+    # 2. DAILY3
+    # -------------------------
+    daily3 = store.load_daily3()
+    for date, e in daily3.items():
+        fields = [
+            e.get("b1_plan", ""),
+            e.get("b1_result", ""),
+            e.get("b1_outcome", ""),
+            e.get("b2_plan", ""),
+            e.get("b2_result", ""),
+            e.get("b2_outcome", ""),
+            e.get("b3_plan", ""),
+            e.get("b3_result", ""),
+            e.get("b3_outcome", ""),
+            e.get("notes", ""),
+            e.get("energy", ""),
+        ]
+        text = " ".join(str(x) for x in fields)
+        tags = re.findall(r"#(\w+)", text)
+
+        # Convert date → timestamp for sorting
+        ts = datetime.strptime(date, "%Y-%m-%d").replace(tzinfo=timezone.utc)
+
+        entries.append({
+            "source": "daily3",
+            "company": "",
+            "timestamp": ts,
+            "text": text,
+            "tags": tags,
+            "raw": {"date": date, "entry": e}
+        })
+
+
+    # -------------------------
+    # 3. HARVESTER
+    # -------------------------
+    harvester_data = load_harvester()
+    for h in harvester_data:
+        entries.append(normalize_harvester(h))
+
+    # -------------------------
+    # 4. COMPANIES
+    # -------------------------
+
+    for c in store.COMPANY_STORE:
+        entries.append(normalize_company(c))
+
+    # -------------------------
+    # 5. OPTIONAL: FRENOTES
+    # -------------------------
+    # if you add freenotes.json later:
+    # for f in store.FREENOTES_STORE:
+    #     entries.append(...)
+
+    # -------------------------
+    # Apply multi-stage refinement
+    # -------------------------
+    results = refine_search(q, entries, lambda e: e["text"], lambda e: e["tags"])
+
+    pending = find_pending_followups(entries)
+
+    # Sort reverse-chrono
+    results.sort(key=lambda e: e["timestamp"], reverse=True)
+
+    return templates.TemplateResponse(
+        "unified_search.html",
+        {
+            "request": request,
+            "q": q,
+            "results": results,
+            "pending": pending
         }
     )
 
@@ -683,20 +813,25 @@ def test_page(request: Request):
     )
 
 
+
 @router.get("/timeline")
 def timeline(request: Request, q: str = ""):
     visits = sorted(store.VISIT_STORE, key=lambda v: v.timestamp, reverse=True)
 
+    # Optional search, but keep enrichment
     if q:
-        q_lower = q.lower()
-        visits = [v for v in visits if q_lower in v.raw_notes.lower()]
+        def get_text(v):
+            return v.raw_notes or ""
+
+        def get_tags(v):
+            return v.tags or []
+
+        visits = refine_search(q, visits, get_text, get_tags)
 
     enriched = []
     for v in visits:
-        # Convert timestamp to local timezone
+        # Local timestamp
         local_ts = v.timestamp.astimezone()
-
-        # Format timestamp for readability
         ts_str = local_ts.strftime("%b %d, %Y %I:%M %p")
 
         # Company lookup
@@ -709,6 +844,7 @@ def timeline(request: Request, q: str = ""):
         if v.raw_notes:
             preview = v.raw_notes[:80] + ("..." if len(v.raw_notes) > 80 else "")
 
+        # Sentiment + energy
         sentiment = None
         energy = None
         if v.insights and "sentiment_energy" in v.insights:
@@ -727,17 +863,42 @@ def timeline(request: Request, q: str = ""):
 
     return templates.TemplateResponse(
         "timeline.html",
-        {"request": request, "visits": enriched}
+        {
+            "request": request,
+            "visits": enriched,
+            "q": q,
+        }
     )
-
 
 
 @router.get("/visit/{visit_id}")
 def visit_detail(request: Request, visit_id: str):
     visit = get_visit(visit_id)
 
+    if visit:
+        needs_processing = (
+            not visit.narrative or
+            not visit.structured_summary or
+            not visit.insights or
+            not visit.recommended_next_steps or
+            not visit.normalized_notes
+        )
+
+        if needs_processing:
+            from store import save_visits
+
+            processed = build_visit_record(visit.raw_notes)  # this will update the visit in place
+
+            visit.normalized_notes = processed.normalized_notes
+            visit.structured_summary = processed.structured_summary
+            visit.insights = processed.insights
+            visit.recommended_next_steps = processed.recommended_next_steps
+            visit.narrative = processed.narrative
+
+            save_visits(store.VISIT_STORE)
+
     company = None
-    if visit.company_id is not None:
+    if visit and visit.company_id is not None:
         company = instance.get_company(visit.company_id)
 
     return templates.TemplateResponse(
@@ -955,42 +1116,43 @@ def daily3_submit(
 
 @router.get("/daily3/search")
 def daily3_search(request: Request, q: str = ""):
-    """
-    Unified Daily3 search with optional regex.
-    Searches across all Daily3 entries (plans, results, outcomes, notes).
-    """
     all_entries = store.load_daily3()  # dict: date → entry
 
-    results = []
-    # Regex mode: /pattern/
-    if q.startswith("/") and q.endswith("/") and len(q) > 2:
-        import re
-        pattern = q[1:-1]
-        try:
-            regex = re.compile(pattern, re.IGNORECASE)
-            for date, entry in all_entries.items():
-                text = " ".join(str(v) for v in entry.values())
-                if regex.search(text):
-                    results.append((date, entry))
-        except re.error:
-            # fallback to simple search
-            q_lower = q.lower()
-            for date, entry in all_entries.items():
-                text = " ".join(str(v) for v in entry.values()).lower()
-                if q_lower in text:
-                    results.append((date, entry))
+    # Convert dict → list of objects for uniformity
+    items = []
+    for date, entry in all_entries.items():
+        items.append({
+            "date": date,
+            "entry": entry
+        })
 
-    else:
-        # Simple substring search
-        if q:
-            q_lower = q.lower()
-            for date, entry in all_entries.items():
-                text = " ".join(str(v) for v in entry.values()).lower()
-                if q_lower in text:
-                    results.append((date, entry))
+    def get_text(obj):
+        e = obj["entry"]
+        # Normalize missing fields
+        fields = [
+            e.get("b1_plan", ""),
+            e.get("b1_result", ""),
+            e.get("b1_outcome", ""),
+            e.get("b2_plan", ""),
+            e.get("b2_result", ""),
+            e.get("b2_outcome", ""),
+            e.get("b3_plan", ""),
+            e.get("b3_result", ""),
+            e.get("b3_outcome", ""),
+            e.get("notes", ""),
+            e.get("energy", ""),
+        ]
+        return " ".join(str(x) for x in fields)
+
+    def get_tags(obj):
+        e = obj["entry"]
+        notes = e.get("notes", "")
+        return re.findall(r"#(\w+)", notes)
+
+    results = refine_search(q, items, get_text, get_tags)
 
     # Sort newest first
-    results.sort(key=lambda x: x[0], reverse=True)
+    results.sort(key=lambda x: x["date"], reverse=True)
 
     return templates.TemplateResponse(
         "daily3_search.html",

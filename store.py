@@ -4,7 +4,7 @@ import json
 import re
 from pathlib import Path
 from typing import Optional
-from search_utils import unified_search
+from pipeline import extract_tags, auto_tags
 
 # 1. Define file path FIRST
 BASE_DIR = Path(__file__).resolve().parent
@@ -199,6 +199,7 @@ def load_daily3():
         return {}
 
     text = DAILY3_FILE.read_text().strip()
+
     if not text:
         return {}  # empty file → treat as empty dict
 
@@ -592,5 +593,75 @@ def extract_company_from_url(url: str):
     careers_url = f"https://{domain}/careers"
     return company, careers_url
 
+
+def normalize_daily3(date, entry):
+    fields = [
+        entry.get("b1_plan", ""),
+        entry.get("b1_result", ""),
+        entry.get("b1_outcome", ""),
+        entry.get("b2_plan", ""),
+        entry.get("b2_result", ""),
+        entry.get("b2_outcome", ""),
+        entry.get("b3_plan", ""),
+        entry.get("b3_result", ""),
+        entry.get("b3_outcome", ""),
+        entry.get("notes", ""),
+        entry.get("energy", ""),
+    ]
+    text = " ".join(str(x) for x in fields)
+
+    manual = extract_tags(text)
+    auto = auto_tags(text)
+
+    return {
+        "date": date,
+        "text": text,
+        "tags": manual + auto,
+        "raw": entry
+    }
+
+
+def normalize_harvester(h: dict):
+    text = f"{h.get('name', '')} {h.get('source_url', '')} {h.get('careers_url', '')}"
+
+    manual = extract_tags(text)
+    auto = auto_tags(text)
+
+    ts_raw = h.get("last_visited")
+    if ts_raw:
+        try:
+            ts = datetime.fromisoformat(ts_raw)
+        except:
+            ts = datetime.now(timezone.utc)
+    else:
+        ts = datetime.now(timezone.utc)
+
+    return {
+        "source": "harvester",
+        "id": h.get("name"),   # ← ADD THIS
+        "company": h.get("name", ""),
+        "timestamp": ts,
+        "text": text,
+        "tags": manual + auto,
+        "raw": h
+    }
+
+
+def normalize_company(c):
+    text = f"{c.name} {c.notes or ''} {' '.join(c.urls or [])}"
+    manual = extract_tags(text)
+    auto = auto_tags(text)
+
+    # Choose a stable timestamp
+    ts = c.updated_at or c.created_at
+
+    return {
+        "source": "company",
+        "company": c.name,
+        "timestamp": ts,
+        "text": text,
+        "tags": manual + auto,
+        "raw": c
+    }
 
 

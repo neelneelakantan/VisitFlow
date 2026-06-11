@@ -47,10 +47,14 @@
     <a href="/companies/harvest">+ Add Harvester</a>
 
     <!-- Search Bar -->
-    <form method="get" action="/search">
-        <input type="text" name="q" placeholder="Search..." value="{{ q }}" />
-        <button type="submit">Search</button>
+    <form method="get" action="/search_entities">
+    <input type="text" name="q" placeholder="Search companies or harvester..." value="{{ q }}" />
+    <button type="submit">Search</button>
     </form>
+
+    <p style="margin-top:4px;">
+        <a href="/search">Advanced search →</a>
+    </p>
 </p>
 
 
